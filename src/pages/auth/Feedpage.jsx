@@ -9,7 +9,7 @@ const Feedpage = () => {
             id: 1,
             image: 'https://lh3.googleusercontent.com/gps-cs-s/AG0ilSwsIGmltl3O2Hd9IIABzZou5xHliOTQOWMLmrN1ojz-IYhr-Mv9bUGCMQWmFWaApB7T1wLCk0NbwD90PQwKUL4o1MLLMnbeodDSnpOBVxx5eCsaOurtOCnCM_RYZ2oIldRwNbv-PQ=s847-k-no',
             location: 'M7MC+J55, Chandragiri 44600',
-            locationlink: 'https://maps.app.goo.gl/VTWktJ7zPA78S68d6',
+            locationlink: 'https://www.google.com/maps/place/Bhiradil+Park/@27.6840052,85.2704763,15z/data=!4m6!3m5!1s0x39eb2379e453e1df:0x925df5716caca3ae!8m2!3d27.6840052!4d85.2704763!16s%2Fg%2F11f632mmz8?entry=ttu&g_ep=EgoyMDI1MTEwOS4wIKXMDSoASAFQAw%3D%3D',
             caption: 'Most beautiful sunset I have ever witnessed. The blue domes against the golden sky created pure magic.',
             author: 'Sita Gautam',
             place: 'Bhiradil Park',
@@ -83,9 +83,9 @@ const Feedpage = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
-                <div className="px-6 py-4 flex items-center justify-between">
+                <div className="px-6 py-1 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <MapPin className="w-8 h-8 text-emerald-600" />
+                        <img className='w-25 h-20' src='https://img.notionusercontent.com/s3/prod-files-secure%2F216d903c-0d87-465d-a560-cf6430ae550c%2F5734a301-a916-4103-99a1-e467ee730991%2Fa-clean-and-minimal-logo-design-featurin_-9wbRjIfTDmxHWXT5bPqKQ_v-9kkumvQ2uk0chTWnJjHg-removebg-preview.png/size/w=1330?exp=1763024252&sig=E6_E_0SnC03-3KySTMn4ljJXkSw_hEvQf9KL9L5Lh5I&id=2a37fe74-ddc9-80cd-9edb-e42f134ca0e2&table=block'></img>
                         <h1 className="text-2xl font-bold text-gray-900">Pahunapath</h1>
                     </div>
 
