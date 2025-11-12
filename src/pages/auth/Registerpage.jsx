@@ -1,28 +1,37 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { registerUserApi } from "../../apis/Api";
+import bg from "../../assets/images/login-bg.png"; // Use your register background if different
+import logo from "../../assets/images/logo.png";
 
 const RegisterPage = () => {
-  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: ""
+    password: "",
   });
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.name) newErrors.name = "Name is required";
+    if (!formData.email) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email))
+      newErrors.email = "Enter a valid email";
+    if (!formData.password) newErrors.password = "Password is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!formData.name || !formData.email || !formData.password) {
-      console.log("All fields are required");
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       const formDataToSend = new FormData();
@@ -31,109 +40,129 @@ const RegisterPage = () => {
       formDataToSend.append("password", formData.password);
 
       const response = await registerUserApi(formDataToSend);
-
+      console.log("Registration successful:", response.data);
     } catch (err) {
-      console.error("Error registering user:", err);
+      console.error(err);
+      setServerError("Registration failed. Try again.");
     }
   };
 
   return (
-    <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
+    <div className="flex min-h-screen bg-[#e7f4ff]">
+      {/* Left side */}
+      <div className="w-1/2 relative flex items-center justify-center text-white">
         <img
-          src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-          alt="Your Company"
-          className="mx-auto h-10 w-auto"
+          src={bg}
+          alt="background"
+          className="absolute inset-0 w-full h-full object-cover"
+          aria-hidden="true"
         />
-        <h2 className="mt-10 text-center text-2xl font-bold tracking-tight text-gray-900">
-          Register your account
-        </h2>
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: "rgba(0,0,0,0.2)" }}
+        />
+        <div className="relative z-10 text-center px-10">
+          <h1 className="text-5xl font-semibold mb-4 font-[cursive]">
+            Pahuna Path
+          </h1>
+          <p className="text-lg max-w-md mx-auto leading-relaxed">
+              Where Every Path Tells a Local Story.
+          </p>
+        </div>
       </div>
 
-      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name */}
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-900"
-            >
-              Name
-            </label>
-            <div className="mt-2">
+      {/* Right side */}
+      <div className="w-1/2 flex items-center justify-center bg-white p-12 relative">
+        <img
+          src={logo}
+          alt="logo"
+          className="absolute top-8 right-12 h-30 w-30"
+        />
+        <div className="w-full max-w-md">
+          <h2 className="text-4xl font-bold text-blue-600 mb-2">Register</h2>
+          <p className="text-gray-500 mb-8">Create your account</p>
+
+          <form onSubmit={handleSubmit}>
+            {/* Name */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Name
+              </label>
               <input
-                id="name"
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                required
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 sm:text-sm"
+                placeholder="Pahuna Path"
+                className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-400 outline-none"
               />
+              {errors.name && (
+                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+              )}
             </div>
-          </div>
 
-          {/* Email */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-900"
-            >
-              Email address
-            </label>
-            <div className="mt-2">
+            {/* Email */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
               <input
-                id="email"
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                required
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 sm:text-sm"
+                placeholder="pahunapath@gmail.com"
+                className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-400 outline-none"
               />
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              )}
             </div>
-          </div>
 
-          {/* Password */}
-          <div>
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-900"
-              >
+            {/* Password */}
+            <div className="mb-6 relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-sm text-indigo-600 hover:text-indigo-500"
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-            <div className="mt-2">
               <input
-                id="password"
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                required
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 sm:text-sm"
+                placeholder="************"
+                className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-400 outline-none"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-9 text-sm text-blue-500 hover:underline"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+              {errors.password && (
+                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+              )}
             </div>
-          </div>
 
-          {/* Submit Button */}
-          <div>
+            {serverError && (
+              <p className="text-red-500 text-center mb-4">{serverError}</p>
+            )}
+
             <button
               type="submit"
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-md font-semibold transition-all"
             >
-              Register
+              REGISTER
             </button>
-          </div>
-        </form>
+          </form>
+
+          <p className="text-center text-gray-500 mt-8">
+            Already have an account?{" "}
+            <a href="/login" className="text-blue-500 font-semibold">
+              Login Now
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

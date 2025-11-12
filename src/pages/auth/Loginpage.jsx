@@ -54,8 +54,7 @@ const Loginpage = () => {
             Pahuna Path
           </h1>
           <p className="text-lg max-w-md mx-auto leading-relaxed">
-            Travel is the only purchase that enriches you in ways beyond
-            material wealth.
+              Where Every Path Tells a Local Story.
           </p>
         </div>
       </div>
