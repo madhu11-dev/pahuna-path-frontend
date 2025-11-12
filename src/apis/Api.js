@@ -46,7 +46,7 @@ export const registerUserApi = (data) => {
 };
 
 export const loginUserApi = (data) => {
-  return fetchApi("/api/user/login", {
+  return fetchApi("/api/login", {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(data),
