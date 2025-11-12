@@ -2,7 +2,7 @@ import React from 'react'
 
 const Loginpage = () => {
   return (
-    <div>Loginpage</div>
+    <div class='font-mono text-success'>Loginpage</div>
   )
 }
 
