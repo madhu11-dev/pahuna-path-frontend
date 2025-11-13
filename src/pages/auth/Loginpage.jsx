@@ -51,6 +51,7 @@ const Loginpage = () => {
       formDataToSend.append("email", formData.email);
       formDataToSend.append("password", formData.password);
 
+      console.log(formDataToSend);
       const response = await loginUserApi(formDataToSend);
       if (response.status === true) {
         notifyLoginSuccess();
