@@ -45,6 +45,16 @@ export const registerUserApi = (data) => {
   });
 };
 
+// location APIs
+export const newlocation = (data) => {
+  const isFormData = data instanceof FormData;
+  return fetchApi("/api/addlocation", {
+    method: "POST",
+    headers: getHeaders(isFormData),
+    body: isFormData ? data : JSON.stringify(data),
+  });
+};
+
 export const loginUserApi = (data) => {
   return fetchApi("/api/login", {
     method: "POST",
