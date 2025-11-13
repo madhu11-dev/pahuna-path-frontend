@@ -1,9 +1,25 @@
 import React, { useState } from "react";
 import { registerUserApi } from "../../apis/Api";
-import bg from "../../assets/images/login-bg.png"; // Use your register background if different
-import logo from "../../assets/images/logo.png";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import background from "../../assets/images/login-bg.png"; 
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
+
+  const notifyRegisterSuccess = () =>
+    toast.success("User Account Created!", {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: false,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+    });
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -11,7 +27,6 @@ const RegisterPage = () => {
   });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,7 +55,10 @@ const RegisterPage = () => {
       formDataToSend.append("password", formData.password);
 
       const response = await registerUserApi(formDataToSend);
-      console.log("Registration successful:", response.data);
+      if (response.status === true) {
+        notifyRegisterSuccess();
+        setTimeout(() => navigate("/login"), 2000);
+      }
     } catch (err) {
       console.error(err);
       setServerError("Registration failed. Try again.");
@@ -48,122 +66,132 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#e7f4ff]">
-      {/* Left side */}
-      <div className="w-1/2 relative flex items-center justify-center text-white">
-        <img
-          src={bg}
-          alt="background"
-          className="absolute inset-0 w-full h-full object-cover"
-          aria-hidden="true"
-        />
-        <div
-          className="absolute inset-0"
-          style={{ backgroundColor: "rgba(0,0,0,0.2)" }}
-        />
-        <div className="relative z-10 text-center px-10">
-          <h1 className="text-5xl font-semibold mb-4 font-[cursive]">
-            Pahuna Path
-          </h1>
-          <p className="text-lg max-w-md mx-auto leading-relaxed">
-              Where Every Path Tells a Local Story.
-          </p>
-        </div>
-      </div>
+    <div
+      className="min-h-screen bg-cover bg-center flex flex-col justify-center py-12 sm:py-16"
+      style={{
+        backgroundImage: `url(${background})`,
+      }}
+    >
+      <div className="relative sm:max-w-2xl lg:max-w-3xl mx-auto px-4">
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-green-700 shadow-xl transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl opacity-90"></div>
 
-      {/* Right side */}
-      <div className="w-1/2 flex items-center justify-center bg-white p-12 relative">
-        <img
-          src={logo}
-          alt="logo"
-          className="absolute top-8 right-12 h-30 w-30"
-        />
-        <div className="w-full max-w-md">
-          <h2 className="text-4xl font-bold text-blue-600 mb-2">Register</h2>
-          <p className="text-gray-500 mb-8">Create your account</p>
+        {/* Card */}
+        <div className="relative bg-white shadow-2xl sm:rounded-3xl px-8 py-10 sm:px-12 sm:py-14 backdrop-blur-sm bg-opacity-95">
+          <div className="max-w-xl mx-auto">
+            <h1 className="text-3xl font-bold text-center text-green-600 mb-6">
+              Register
+            </h1>
 
-          <form onSubmit={handleSubmit}>
-            {/* Name */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Name
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Pahuna Path"
-                className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-400 outline-none"
-              />
-              {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Name */}
+              <div className="relative mt-4">
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="off"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
+                  placeholder="Name"
+                />
+                <label
+                  htmlFor="name"
+                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
+                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
+                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
+                    peer-focus:text-sm"
+                >
+                  Name
+                </label>
+                {errors.name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="relative">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="off"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
+                  placeholder="Email"
+                />
+                <label
+                  htmlFor="email"
+                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
+                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
+                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
+                    peer-focus:text-sm"
+                >
+                  Email Address
+                </label>
+                {errors.email && (
+                  <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="off"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
+                  placeholder="Password"
+                />
+                <label
+                  htmlFor="password"
+                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
+                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
+                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
+                    peer-focus:text-sm"
+                >
+                  Password
+                </label>
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                )}
+              </div>
+
+              {serverError && (
+                <p className="text-red-500 text-center">{serverError}</p>
               )}
-            </div>
 
-            {/* Email */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="pahunapath@gmail.com"
-                className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-400 outline-none"
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-              )}
-            </div>
+              <div className="relative">
+                <button
+                  type="submit"
+                  className="w-full bg-green-500 hover:bg-green-700 text-white font-semibold rounded-md py-2 transition"
+                >
+                  Register
+                </button>
+              </div>
+            </form>
 
-            {/* Password */}
-            <div className="mb-6 relative">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="************"
-                className="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-blue-400 outline-none"
-              />
+            {/* Redirect */}
+            <p className="text-center text-gray-600 mt-6">
+              Already have an account?{" "}
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-9 text-sm text-blue-500 hover:underline"
+                onClick={() => navigate("/login")}
+                className="font-semibold hover:underline"
               >
-                {showPassword ? "Hide" : "Show"}
+                Login Now
               </button>
-              {errors.password && (
-                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-              )}
-            </div>
-
-            {serverError && (
-              <p className="text-red-500 text-center mb-4">{serverError}</p>
-            )}
-
-            <button
-              type="submit"
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-md font-semibold transition-all"
-            >
-              REGISTER
-            </button>
-          </form>
-
-          <p className="text-center text-gray-500 mt-8">
-            Already have an account?{" "}
-            <a href="/login" className="text-blue-500 font-semibold">
-              Login Now
-            </a>
-          </p>
+            </p>
+          </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };
