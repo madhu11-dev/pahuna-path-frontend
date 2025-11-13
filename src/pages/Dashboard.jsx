@@ -148,9 +148,9 @@ const Dashboard = () => {
                             Major Contributors
                         </h4>
                         <ul className="text-gray-300 space-y-2">
-                            <li>• Aashish Karki</li>
-                            <li>• Priya Tamang</li>
-                            <li>• Milan Thapa</li>
+                            <li>• </li>
+                            <li>• </li>
+                            <li>• </li>
                             <li>• Saurav Basnet</li>
                         </ul>
                     </div>
