@@ -15,3 +15,4 @@ EXPOSE 3000
 
 # Start React in development mode
 CMD ["npm", "start"]
+RUN npm install -g react-scripts
