@@ -51,10 +51,11 @@ const Loginpage = () => {
       formDataToSend.append("email", formData.email);
       formDataToSend.append("password", formData.password);
 
+      console.log(formDataToSend);
       const response = await loginUserApi(formDataToSend);
       if (response.status === true) {
         notifyLoginSuccess();
-        setTimeout(() => navigate("/"), 2000);
+        setTimeout(() => navigate("/feed"), 2000);
       }
     } catch (err) {
       console.error(err);

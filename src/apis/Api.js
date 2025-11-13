@@ -1,3 +1,5 @@
+import axios from "axios";
+
 const BASE_URL = "http://localhost:8090";
 
 // Helper function to get headers
@@ -16,56 +18,39 @@ const getHeaders = (isFormData = false) => {
   return headers;
 };
 
-// Generic fetch function with BASE_URL & safe JSON parsing
-export const fetchApi = async (endpoint, options) => {
-  const url = `${BASE_URL}${endpoint}`; // 🔥 prepend BASE_URL
-  const response = await fetch(url, options);
-
-  // If not ok, try to read the error as text
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`API Error ${response.status}: ${text}`);
-  }
-
-  // Safely try to parse JSON
+const axiosApi = async (endpoint, method = "GET", data = null, isFormData = false) => {
   try {
-    return await response.json();
-  } catch (err) {
-    throw new Error("Invalid JSON response from server");
+    const response = await axios({
+      url: `${BASE_URL}${endpoint}`,
+      method,
+      headers: getHeaders(isFormData),
+      data: isFormData ? data : data ? JSON.stringify(data) : null,
+    });
+    return response.data;
+  } catch (error) {
+    // Rethrow the original Axios error to preserve response
+    throw error;
   }
 };
 
 // User APIs
 export const registerUserApi = (data) => {
   const isFormData = data instanceof FormData;
-  return fetchApi("/api/auth/register", {
-    method: "POST",
-    headers: getHeaders(isFormData),
-    body: isFormData ? data : JSON.stringify(data),
-  });
-};
-
-// location APIs
-export const newlocation = (data) => {
-  const isFormData = data instanceof FormData;
-  return fetchApi("/api/addlocation", {
-    method: "POST",
-    headers: getHeaders(isFormData),
-    body: isFormData ? data : JSON.stringify(data),
-  });
+  return axiosApi("/api/auth/register", "POST", data, isFormData);
 };
 
 export const loginUserApi = (data) => {
-  return fetchApi("/api/auth/login", {
-    method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify(data),
-  });
+  const isFormData = data instanceof FormData;
+  return axiosApi("/api/auth/login", "POST", data, isFormData);
 };
 
+// Location APIs
+export const newlocation = (data) => {
+  const isFormData = data instanceof FormData;
+  return axiosApi("/api/addlocation", "POST", data, isFormData);
+};
+
+// Test API
 export const testApi = () => {
-  return fetchApi("/api/test", {
-    method: "GET",
-    headers: getHeaders(),
-  });
+  return axiosApi("/api/test", "GET");
 };
