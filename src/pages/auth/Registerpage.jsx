@@ -55,13 +55,25 @@ const RegisterPage = () => {
       formDataToSend.append("password", formData.password);
 
       const response = await registerUserApi(formDataToSend);
+
       if (response.status === true) {
         notifyRegisterSuccess();
-        setTimeout(() => navigate("/login"), 2000);
+        // setTimeout(() => navigate("/login"), 2000);
       }
     } catch (err) {
-      console.error(err);
-      setServerError("Registration failed. Try again.");
+      if (err.isAxiosError && err.response) {
+      // Server returned 422 or other status
+      const data = err.response.data;
+      if (data.errors) {
+        const messages = Object.values(data.errors).flat().join(" ");
+        setServerError(messages);
+      } else {
+        setServerError(data.message || "Registration failed. Try again.");
+      }
+    } else {
+      // Network or unexpected error
+      setServerError("Network error. Try again.");
+    }
     }
   };
 

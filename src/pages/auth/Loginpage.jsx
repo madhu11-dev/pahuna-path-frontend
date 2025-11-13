@@ -55,7 +55,7 @@ const Loginpage = () => {
       const response = await loginUserApi(formDataToSend);
       if (response.status === true) {
         notifyLoginSuccess();
-        setTimeout(() => navigate("/"), 2000);
+        setTimeout(() => navigate("/feed"), 2000);
       }
     } catch (err) {
       console.error(err);
