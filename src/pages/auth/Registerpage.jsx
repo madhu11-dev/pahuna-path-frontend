@@ -1,28 +1,52 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { registerUserApi } from "../../apis/Api";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import background from "../../assets/images/login-bg.png"; 
 
 const RegisterPage = () => {
-  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const notifyRegisterSuccess = () =>
+    toast.success("User Account Created!", {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: false,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+    });
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: ""
+    password: "",
   });
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.name) newErrors.name = "Name is required";
+    if (!formData.email) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email))
+      newErrors.email = "Enter a valid email";
+    if (!formData.password) newErrors.password = "Password is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!formData.name || !formData.email || !formData.password) {
-      console.log("All fields are required");
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       const formDataToSend = new FormData();
@@ -31,110 +55,143 @@ const RegisterPage = () => {
       formDataToSend.append("password", formData.password);
 
       const response = await registerUserApi(formDataToSend);
-
+      if (response.status === true) {
+        notifyRegisterSuccess();
+        setTimeout(() => navigate("/login"), 2000);
+      }
     } catch (err) {
-      console.error("Error registering user:", err);
+      console.error(err);
+      setServerError("Registration failed. Try again.");
     }
   };
 
   return (
-    <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-        <img
-          src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-          alt="Your Company"
-          className="mx-auto h-10 w-auto"
-        />
-        <h2 className="mt-10 text-center text-2xl font-bold tracking-tight text-gray-900">
-          Register your account
-        </h2>
-      </div>
+    <div
+      className="min-h-screen bg-cover bg-center flex flex-col justify-center py-12 sm:py-16"
+      style={{
+        backgroundImage: `url(${background})`,
+      }}
+    >
+      <div className="relative sm:max-w-2xl lg:max-w-3xl mx-auto px-4">
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-green-700 shadow-xl transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl opacity-90"></div>
 
-      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name */}
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-900"
-            >
-              Name
-            </label>
-            <div className="mt-2">
-              <input
-                id="name"
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 sm:text-sm"
-              />
-            </div>
-          </div>
+        {/* Card */}
+        <div className="relative bg-white shadow-2xl sm:rounded-3xl px-8 py-10 sm:px-12 sm:py-14 backdrop-blur-sm bg-opacity-95">
+          <div className="max-w-xl mx-auto">
+            <h1 className="text-3xl font-bold text-center text-green-600 mb-6">
+              Register
+            </h1>
 
-          {/* Email */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-900"
-            >
-              Email address
-            </label>
-            <div className="mt-2">
-              <input
-                id="email"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 sm:text-sm"
-              />
-            </div>
-          </div>
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Name */}
+              <div className="relative mt-4">
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="off"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
+                  placeholder="Name"
+                />
+                <label
+                  htmlFor="name"
+                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
+                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
+                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
+                    peer-focus:text-sm"
+                >
+                  Name
+                </label>
+                {errors.name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                )}
+              </div>
 
-          {/* Password */}
-          <div>
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-900"
-              >
-                Password
-              </label>
+              {/* Email */}
+              <div className="relative">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="off"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
+                  placeholder="Email"
+                />
+                <label
+                  htmlFor="email"
+                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
+                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
+                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
+                    peer-focus:text-sm"
+                >
+                  Email Address
+                </label>
+                {errors.email && (
+                  <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="off"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
+                  placeholder="Password"
+                />
+                <label
+                  htmlFor="password"
+                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
+                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
+                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
+                    peer-focus:text-sm"
+                >
+                  Password
+                </label>
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                )}
+              </div>
+
+              {serverError && (
+                <p className="text-red-500 text-center">{serverError}</p>
+              )}
+
+              <div className="relative">
+                <button
+                  type="submit"
+                  className="w-full bg-green-500 hover:bg-green-700 text-white font-semibold rounded-md py-2 transition"
+                >
+                  Register
+                </button>
+              </div>
+            </form>
+
+            {/* Redirect */}
+            <p className="text-center text-gray-600 mt-6">
+              Already have an account?{" "}
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-sm text-indigo-600 hover:text-indigo-500"
+                onClick={() => navigate("/login")}
+                className="font-semibold hover:underline"
               >
-                {showPassword ? "Hide" : "Show"}
+                Login Now
               </button>
-            </div>
-            <div className="mt-2">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 sm:text-sm"
-              />
-            </div>
+            </p>
           </div>
-
-          {/* Submit Button */}
-          <div>
-            <button
-              type="submit"
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Register
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

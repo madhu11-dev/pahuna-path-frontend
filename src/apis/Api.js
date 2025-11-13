@@ -38,7 +38,7 @@ export const fetchApi = async (endpoint, options) => {
 // User APIs
 export const registerUserApi = (data) => {
   const isFormData = data instanceof FormData;
-  return fetchApi("/api/register", {
+  return fetchApi("/api/auth/register", {
     method: "POST",
     headers: getHeaders(isFormData),
     body: isFormData ? data : JSON.stringify(data),
@@ -56,7 +56,7 @@ export const newlocation = (data) => {
 };
 
 export const loginUserApi = (data) => {
-  return fetchApi("/api/login", {
+  return fetchApi("/api/auth/login", {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(data),
