@@ -3,28 +3,49 @@ import { registerUserApi } from "../../apis/Api";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import background from "../../assets/images/login-bg.png"; 
+import background from "../../assets/images/login-bg.png";
+import logo from "../../assets/images/logo.png";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
 
+  // Waits for toast to finish before resolving
   const notifyRegisterSuccess = () =>
-    toast.success("User Account Created!", {
-      position: "top-right",
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: false,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
+    new Promise((resolve) =>
+      toast.success("User Account Created!", {
+        position: "top-right",
+        autoClose: 1000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        onClose: resolve, //Wait until toast closes
+      })
+    );
+
+  const verificationNeeded = () =>
+    new Promise((resolve) =>
+      toast.info("Verification needed! Check your email for verification", {
+        position: "top-right",
+        autoClose: 1000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+        onClose: resolve,
+      })
+    );
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
   });
+
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
 
@@ -57,155 +78,158 @@ const RegisterPage = () => {
       const response = await registerUserApi(formDataToSend);
 
       if (response.status === true) {
-        notifyRegisterSuccess();
-        // setTimeout(() => navigate("/login"), 2000);
+        await notifyRegisterSuccess();   // Toast 1 → wait
+        await verificationNeeded();      // Toast 2 → wait
+        navigate("/login");              // Then navigate
       }
     } catch (err) {
       if (err.isAxiosError && err.response) {
-      // Server returned 422 or other status
-      const data = err.response.data;
-      if (data.errors) {
-        const messages = Object.values(data.errors).flat().join(" ");
-        setServerError(messages);
+        const data = err.response.data;
+        if (data.errors) {
+          const messages = Object.values(data.errors).flat().join(" ");
+          setServerError(messages);
+        } else {
+          setServerError(data.message || "Registration failed. Try again.");
+        }
       } else {
-        setServerError(data.message || "Registration failed. Try again.");
+        setServerError("Network error. Try again.");
       }
-    } else {
-      // Network or unexpected error
-      setServerError("Network error. Try again.");
-    }
     }
   };
 
-  return (
-    <div
-      className="min-h-screen bg-cover bg-center flex flex-col justify-center py-12 sm:py-16"
-      style={{
-        backgroundImage: `url(${background})`,
-      }}
-    >
-      <div className="relative sm:max-w-2xl lg:max-w-3xl mx-auto px-4">
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-green-700 shadow-xl transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl opacity-90"></div>
+return (
+  <div
+    className="min-h-screen bg-cover bg-center flex items-center justify-center px-4"
+    style={{
+      backgroundImage: `url(${background})`,
+    }}
+  >
+    <div className="relative w-full max-w-sm">
 
-        {/* Card */}
-        <div className="relative bg-white shadow-2xl sm:rounded-3xl px-8 py-10 sm:px-12 sm:py-14 backdrop-blur-sm bg-opacity-95">
-          <div className="max-w-xl mx-auto">
-            <h1 className="text-3xl font-bold text-center text-green-600 mb-6">
-              Register
-            </h1>
+      {/* Background blur (keeps the soft glow effect) */}
+      <div className="absolute inset-0 bg-green-400/20 blur-xl rounded-3xl"></div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Name */}
-              <div className="relative mt-4">
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  autoComplete="off"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
-                  placeholder="Name"
-                />
-                <label
-                  htmlFor="name"
-                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
-                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
-                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
-                    peer-focus:text-sm"
-                >
-                  Name
-                </label>
-                {errors.name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-                )}
-              </div>
-
-              {/* Email */}
-              <div className="relative">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="off"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
-                  placeholder="Email"
-                />
-                <label
-                  htmlFor="email"
-                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
-                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
-                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
-                    peer-focus:text-sm"
-                >
-                  Email Address
-                </label>
-                {errors.email && (
-                  <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-                )}
-              </div>
-
-              {/* Password */}
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="off"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
-                  placeholder="Password"
-                />
-                <label
-                  htmlFor="password"
-                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
-                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
-                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
-                    peer-focus:text-sm"
-                >
-                  Password
-                </label>
-                {errors.password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-                )}
-              </div>
-
-              {serverError && (
-                <p className="text-red-500 text-center">{serverError}</p>
-              )}
-
-              <div className="relative">
-                <button
-                  type="submit"
-                  className="w-full bg-green-500 hover:bg-green-700 text-white font-semibold rounded-md py-2 transition"
-                >
-                  Register
-                </button>
-              </div>
-            </form>
-
-            {/* Redirect */}
-            <p className="text-center text-gray-600 mt-6">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => navigate("/login")}
-                className="font-semibold hover:underline"
-              >
-                Login Now
-              </button>
-            </p>
-          </div>
+      {/* Register Card with Shadow */}
+      <div
+        className="relative bg-white/95 backdrop-blur-md rounded-2xl p-6 sm:p-7 border border-white/60 
+                   shadow-2xl shadow-green-300/40"
+      >
+        {/* Logo */}
+        <div className="flex justify-center mb-4">
+          <img src={logo} alt="Logo" className="w-16 h-16" />
         </div>
+
+        <h1 className="text-xl font-bold text-center text-green-700 mb-5">
+          Create Account
+        </h1>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* Name */}
+          <div className="relative">
+            <input
+              id="name"
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              className="peer w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg
+                         focus:border-green-500 focus:ring-2 focus:ring-green-200
+                         placeholder-transparent transition text-sm"
+              placeholder="Name"
+            />
+            <label
+              htmlFor="name"
+              className="absolute left-3 -top-2.5 bg-white/95 px-1 text-xs text-gray-600
+                         transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:text-gray-400 
+                         peer-placeholder-shown:top-2 peer-focus:-top-2.5 peer-focus:text-green-600 peer-focus:text-xs rounded-lg"
+            >
+              Name
+            </label>
+            {errors.name && <p className="text-red-500 text-xs">{errors.name}</p>}
+          </div>
+
+          {/* Email */}
+          <div className="relative">
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="peer w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg
+                         focus:border-green-500 focus:ring-2 focus:ring-green-200
+                         placeholder-transparent transition text-sm"
+              placeholder="Email"
+            />
+            <label
+              htmlFor="email"
+              className="absolute left-3 -top-2.5 bg-white px-1 text-xs text-gray-600
+                         transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:text-gray-400 
+                         peer-placeholder-shown:top-2 peer-focus:-top-2.5 peer-focus:text-green-600 peer-focus:text-xs rounded-lg"
+            >
+              Email Address
+            </label>
+            {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
+          </div>
+
+          {/* Password */}
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="peer w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg
+                         focus:border-green-500 focus:ring-2 focus:ring-green-200
+                         placeholder-transparent transition text-sm"
+              placeholder="Password"
+            />
+            <label
+              htmlFor="password"
+              className="absolute left-3 -top-2.5 bg-white px-1 text-xs text-gray-600
+                         transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:text-gray-400 
+                         peer-placeholder-shown:top-2 peer-focus:-top-2.5 peer-focus:text-green-600 peer-focus:text-xs rounded-lg"
+            >
+              Password
+            </label>
+            {errors.password && <p className="text-red-500 text-xs">{errors.password}</p>}
+          </div>
+
+          {serverError && (
+            <p className="text-red-500 text-center text-xs">{serverError}</p>
+          )}
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold
+                       py-2.5 text-sm rounded-lg transition-all shadow-md hover:shadow-lg"
+          >
+            Register
+          </button>
+        </form>
+
+        {/* Login text */}
+        <p className="text-center text-gray-600 mt-4 text-sm">
+          Already have an account?{" "}
+          <button
+            onClick={() => navigate("/login")}
+            className="text-green-600 font-semibold hover:underline"
+          >
+            Login
+          </button>
+        </p>
       </div>
-      <ToastContainer />
     </div>
-  );
+
+    <ToastContainer />
+  </div>
+);
+
+
+
 };
 
 export default RegisterPage;
