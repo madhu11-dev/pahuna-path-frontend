@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { registerUserApi } from "../../apis/Api";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import background from "../../assets/images/login-bg.png"; 
+import { registerUserApi } from "../../apis/Api";
+import background from "../../assets/images/login-bg.png";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -29,6 +29,7 @@ const RegisterPage = () => {
   const [serverError, setServerError] = useState("");
 
   const handleChange = (e) => {
+
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
   };
@@ -42,6 +43,8 @@ const RegisterPage = () => {
     if (!formData.password) newErrors.password = "Password is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+
+
   };
 
   const handleSubmit = async (e) => {
@@ -56,10 +59,12 @@ const RegisterPage = () => {
 
       const response = await registerUserApi(formDataToSend);
 
+
       if (response.status === true) {
         notifyRegisterSuccess();
         // setTimeout(() => navigate("/login"), 2000);
       }
+
     } catch (err) {
       if (err.isAxiosError && err.response) {
       // Server returned 422 or other status
