@@ -15,3 +15,6 @@ EXPOSE 3000
 
 # Start React in development mode
 CMD ["npm", "start"]
+
+# Uncomment the following line if there is react-scripts error:
+# RUN npm install -g react-scripts
