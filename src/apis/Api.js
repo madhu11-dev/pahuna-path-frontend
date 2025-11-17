@@ -31,10 +31,14 @@ const post = (endpoint, data) => {
   return axiosApi({ endpoint, method: "POST", data, isFormData });
 };
 
+const get = (endpoint) => axiosApi({ endpoint });
+
 export const registerUserApi = (data) => post("/api/auth/register", data);
 
 export const loginUserApi = (data) => post("/api/auth/login", data);
 
-export const newlocation = (data) => post("/api/addlocation", data);
+export const newlocation = (data) => post("/api/places", data);
+
+export const getPlaces = () => get("/api/places");
 
 export const testApi = () => axiosApi({ endpoint: "/api/test" });
