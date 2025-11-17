@@ -3,3 +3,4 @@ build
 .git
 Dockerfile
 .dockerignore
+.gitignore

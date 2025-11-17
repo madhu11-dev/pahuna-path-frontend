@@ -1,13 +1,13 @@
-# Use Node.js for development
+# Base image
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy only package files first
+# Install dependencies
 COPY package*.json ./
 RUN npm install
 
-# Copy everything else
+# Copy the rest of the application
 COPY . .
 
 # Expose React’s default port
@@ -15,4 +15,6 @@ EXPOSE 3000
 
 # Start React in development mode
 CMD ["npm", "start"]
-RUN npm install -g react-scripts
+
+# Uncomment the following line if there is react-scripts error:
+# RUN npm install -g react-scripts

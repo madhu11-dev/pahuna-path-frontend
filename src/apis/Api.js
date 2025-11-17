@@ -2,29 +2,22 @@ import axios from "axios";
 
 const BASE_URL = "http://localhost:8090";
 
-// Helper function to get headers
 const getHeaders = (isFormData = false) => {
-  const headers = {};
   const token = localStorage.getItem("token");
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  if (!isFormData) {
-    headers["Content-Type"] = "application/json";
-  }
+  if (!isFormData) headers["Content-Type"] = "application/json";
 
   return headers;
 };
 
-const axiosApi = async (endpoint, method = "GET", data = null, isFormData = false) => {
+const axiosApi = async ({ endpoint, method = "GET", data, isFormData = false }) => {
   try {
     const response = await axios({
       url: `${BASE_URL}${endpoint}`,
       method,
       headers: getHeaders(isFormData),
-      data: isFormData ? data : data ? JSON.stringify(data) : null,
+      data: isFormData ? data : data ? JSON.stringify(data) : undefined,
     });
     return response.data;
   } catch (error) {
@@ -33,24 +26,15 @@ const axiosApi = async (endpoint, method = "GET", data = null, isFormData = fals
   }
 };
 
-// User APIs
-export const registerUserApi = (data) => {
+const post = (endpoint, data) => {
   const isFormData = data instanceof FormData;
-  return axiosApi("/api/auth/register", "POST", data, isFormData);
+  return axiosApi({ endpoint, method: "POST", data, isFormData });
 };
 
-export const loginUserApi = (data) => {
-  const isFormData = data instanceof FormData;
-  return axiosApi("/api/auth/login", "POST", data, isFormData);
-};
+export const registerUserApi = (data) => post("/api/auth/register", data);
 
-// Location APIs
-export const newlocation = (data) => {
-  const isFormData = data instanceof FormData;
-  return axiosApi("/api/addlocation", "POST", data, isFormData);
-};
+export const loginUserApi = (data) => post("/api/auth/login", data);
 
-// Test API
-export const testApi = () => {
-  return axiosApi("/api/test", "GET");
-};
+export const newlocation = (data) => post("/api/addlocation", data);
+
+export const testApi = () => axiosApi({ endpoint: "/api/test" });

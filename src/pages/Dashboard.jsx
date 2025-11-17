@@ -28,7 +28,7 @@ const Dashboard = () => {
             <nav className="absolute top-0 left-0 w-full flex flex-wrap items-center justify-between px-6 md:px-10 py-4 md:py-6 z-20 bg-transparent">
                 <div className="flex items-center space-x-2 md:space-x-3">
                     <img
-                        src="https://img.notionusercontent.com/s3/prod-files-secure%2F216d903c-0d87-465d-a560-cf6430ae550c%2F5734a301-a916-4103-99a1-e467ee730991%2Fa-clean-and-minimal-logo-design-featurin_-9wbRjIfTDmxHWXT5bPqKQ_v-9kkumvQ2uk0chTWnJjHg-removebg-preview.png/size/w=1330?exp=1763028757&sig=mO45rboAxY3g-GQpkmRRGOtDxUnx5JX9tPGbmW1KA0A&id=2a37fe74-ddc9-80cd-9edb-e42f134ca0e2&table=block"
+                        src="https://img.notionusercontent.com/s3/prod-files-secure%2F216d903c-0d87-465d-a560-cf6430ae550c%2F5734a301-a916-4103-99a1-e467ee730991%2Fa-clean-and-minimal-logo-design-featurin_-9wbRjIfTDmxHWXT5bPqKQ_v-9kkumvQ2uk0chTWnJjHg-removebg-preview.png/size/w=1330?exp=1763455430&sig=7JdtuOxiQExDE-2v0niu1Ur-zsrG-q9F42F-U5X_ooM&id=2a37fe74-ddc9-80cd-9edb-e42f134ca0e2&table=block"
                         alt="Pahunapath Logo"
                         className="h-10 w-auto md:h-14"
                     />
