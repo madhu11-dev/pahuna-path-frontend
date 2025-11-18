@@ -25,7 +25,9 @@ const RegisterPage = () => {
 
   const handleEmail = (e) => {
     setEmail(e.target.value);
-    if (e.target.value.includes("@")) setEmailError("");
+    if (e.target.value.trim() !== "" && e.target.value.includes("@"))
+      setEmailError("");
+    else if (e.target.value.trim() === "") setEmailError("Email is required");
   };
 
   const handlePassword = (e) => {
@@ -77,26 +79,27 @@ const RegisterPage = () => {
     return isValid;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    var isvalidated = validate();
-    if (!isvalidated) {
-      return;
-    }
+    if (!validate()) return;
 
-    const data = {
-      name: name,
-      email: email,
-      password: password,
-    };
-    registerUserApi(data).then((res) => {
+    const data = { name, email, password };
+
+    try {
+      const res = await registerUserApi(data);
       if (res.data.success === false) {
         toast.error(res.data.message);
       } else {
         toast.success(res.data.message);
       }
-    });
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toast.error("Network error. Please try again.");
+      }
+    }
   };
 
   return (
