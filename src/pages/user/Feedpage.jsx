@@ -1,75 +1,110 @@
-import { useState } from 'react';
-import { LogOut, MapPin, Image as ImageIcon, Star, UtensilsCrossed, Bookmark, User } from 'lucide-react';
-import { newlocation } from "../../apis/Api";
+import { useEffect, useState } from 'react';
+import { LogOut, MapPin, Star, UtensilsCrossed, Bookmark, User } from 'lucide-react';
+import { newlocation, getPlaces } from "../../apis/Api";
+import pondImage from '../../assets/images/pond.jpg';
 
 const Feedpage = () => {
     const [activeTab, setActiveTab] = useState('places');
-    const [posts, setPosts] = useState([
-        {
-            id: 1,
-            image: 'https://lh3.googleusercontent.com/gps-cs-s/AG0ilSwsIGmltl3O2Hd9IIABzZou5xHliOTQOWMLmrN1ojz-IYhr-Mv9bUGCMQWmFWaApB7T1wLCk0NbwD90PQwKUL4o1MLLMnbeodDSnpOBVxx5eCsaOurtOCnCM_RYZ2oIldRwNbv-PQ=s847-k-no',
-            location: 'M7MC+J55, Chandragiri 44600',
-            locationlink: 'https://www.google.com/maps/place/Bhiradil+Park/@27.6840052,85.2704763,15z/data=!4m6!3m5!1s0x39eb2379e453e1df:0x925df5716caca3ae!8m2!3d27.6840052!4d85.2704763!16s%2Fg%2F11f632mmz8?entry=ttu&g_ep=EgoyMDI1MTEwOS4wIKXMDSoASAFQAw%3D%3D',
-            caption: 'Most beautiful sunset I have ever witnessed. The blue domes against the golden sky created pure magic.',
-            author: 'Sita Gautam',
-            place: 'Bhiradil Park',
-            rating: 4.8
-        },
-        {
-            id: 2,
-            image: 'https://images.pexels.com/photos/1032650/pexels-photo-1032650.jpeg?auto=compress&cs=tinysrgb&w=800',
-            location: 'Kyoto, Japan',
-            locationlink: 'https://maps.app.goo.gl/VTWktJ7zPA78S68d6',
-            caption: 'Walking through the Fushimi Inari shrine early morning. Thousands of torii gates creating an endless tunnel.',
-            author: 'Michael Torres',
-            place: 'Bhiradil Park',
-            rating: 4.9
-        }
-    ]);
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
     const [newPost, setNewPost] = useState({
-        place: '',
+        place_name: '',
         caption: '',
-        image: '',
-        locationlink: '',
-        rating: 0,
-        authorid: 1
+        imagesInput: '',
+        google_map_link: '',
+        review: ''
     });
+
+    const placeholderImage = 'https://img.notionusercontent.com/s3/prod-files-secure%2F216d903c-0d87-465d-a560-cf6430ae550c%2F5734a301-a916-4103-99a1-e467ee730991%2Fa-clean-and-minimal-logo-design-featurin_-9wbRjIfTDmxHWXT5bPqKQ_v-9kkumvQ2uk0chTWnJjHg-removebg-preview.png/size/w=1330?exp=1763462242&sig=vV99sbMq9PIRMklElGaFHJy_ozgfu-RcsSV2hz0pJrg&id=2a37fe74-ddc9-80cd-9edb-e42f134ca0e2&table=block';
+
+    const normalizePlace = (place) => ({
+        id: place.id,
+        image: place.images?.[0] || placeholderImage,
+        images: place.images || [],
+        caption: place.caption,
+        author: place.author || (place.user_id ? `User #${place.user_id}` : 'Traveler'),
+        place: place.place_name,
+        review: place.review ?? 0,
+        location: place.place_name,
+        locationlink: place.google_map_link || '#'
+    });
+
+    useEffect(() => {
+        const fetchPlaces = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await getPlaces();
+                const fetched = (response?.data || []).map(normalizePlace);
+                setPosts(fetched);
+            } catch (err) {
+                console.error("Failed to fetch places:", err);
+                setError('Unable to load places. Please try again later.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPlaces();
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!newPost.place || !newPost.caption || !newPost.image || !newPost.locationlink) {
+        if (!newPost.place_name || !newPost.caption || !newPost.imagesInput || !newPost.google_map_link) {
             alert('Please fill in all fields.');
             return;
         }
 
+        const parsedImages = newPost.imagesInput
+            .split(/[\n,]/)
+            .map((url) => url.trim())
+            .filter(Boolean);
+
+        if (!parsedImages.length) {
+            alert('Please provide at least one image URL.');
+            return;
+        }
+
+        const reviewValue = parseFloat(newPost.review);
+        if (Number.isNaN(reviewValue) || reviewValue < 0 || reviewValue > 5) {
+            alert('Review must be a number between 0 and 5.');
+            return;
+        }
+
+        const payload = {
+            place_name: newPost.place_name,
+            caption: newPost.caption,
+            images: parsedImages,
+            review: reviewValue,
+            google_map_link: newPost.google_map_link
+        };
+
         try {
-            // Prepare FormData (useful if your API expects multipart/form-data)
-            const formDataToSend = new FormData();
-            formDataToSend.append("place", newPost.place);
-            formDataToSend.append("caption", newPost.caption);
-            formDataToSend.append("image", newPost.image);
-            formDataToSend.append("locationlink", newPost.locationlink);
-            formDataToSend.append("rating", newPost.rating);
+            const response = await newlocation(payload);
+            const createdPlace = response?.data;
 
-            // Send data to backend
-            const response = await newlocation(formDataToSend);
-
-            if (response.status === 200 || response.status === 201) {
+            if (createdPlace) {
                 alert("New place successfully shared!");
 
-                // Reset modal + form
+                const normalizedPost = normalizePlace({
+                    ...createdPlace,
+                    author: 'You'
+                });
+
+                setPosts((prev) => [normalizedPost, ...prev]);
+
                 setShowModal(false);
                 setNewPost({
-                    place: '',
+                    place_name: '',
                     caption: '',
-                    image: '',
-                    locationlink: '',
-                    rating: 0,
-                    author: 'You'
+                    imagesInput: '',
+                    google_map_link: '',
+                    review: ''
                 });
             } else {
                 alert("Failed to share place. Please try again.");
@@ -85,7 +120,7 @@ const Feedpage = () => {
             <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
                 <div className="px-6 py-1 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <img className='w-25 h-20' src='https://img.notionusercontent.com/s3/prod-files-secure%2F216d903c-0d87-465d-a560-cf6430ae550c%2F5734a301-a916-4103-99a1-e467ee730991%2Fa-clean-and-minimal-logo-design-featurin_-9wbRjIfTDmxHWXT5bPqKQ_v-9kkumvQ2uk0chTWnJjHg-removebg-preview.png/size/w=1330?exp=1763024252&sig=E6_E_0SnC03-3KySTMn4ljJXkSw_hEvQf9KL9L5Lh5I&id=2a37fe74-ddc9-80cd-9edb-e42f134ca0e2&table=block'></img>
+                        <img className='w-25 h-20' src='https://img.notionusercontent.com/s3/prod-files-secure%2F216d903c-0d87-465d-a560-cf6430ae550c%2F5734a301-a916-4103-99a1-e467ee730991%2Fa-clean-and-minimal-logo-design-featurin_-9wbRjIfTDmxHWXT5bPqKQ_v-9kkumvQ2uk0chTWnJjHg-removebg-preview.png/size/w=1330?exp=1763462242&sig=vV99sbMq9PIRMklElGaFHJy_ozgfu-RcsSV2hz0pJrg&id=2a37fe74-ddc9-80cd-9edb-e42f134ca0e2&table=block'></img>
                         <h1 className="text-2xl font-bold text-gray-900">Pahunapath</h1>
                     </div>
 
@@ -145,8 +180,8 @@ const Feedpage = () => {
                                     <input
                                         type="text"
                                         placeholder="Place Name"
-                                        value={newPost.place}
-                                        onChange={(e) => setNewPost({ ...newPost, place: e.target.value })}
+                                        value={newPost.place_name}
+                                        onChange={(e) => setNewPost({ ...newPost, place_name: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg p-2s p-4 mb-2"
                                     />
                                     <textarea
@@ -156,27 +191,43 @@ const Feedpage = () => {
                                         className="w-full border border-gray-300 rounded-lg p-2 mb-1"
                                         rows="3"
                                     />
-                                    <input
-                                        type="text"
-                                        placeholder="Image URL"
-                                        value={newPost.image}
-                                        onChange={(e) => setNewPost({ ...newPost, image: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 mb-2 "
+                                    <textarea
+                                        placeholder="Image URLs (comma or newline separated)"
+                                        value={newPost.imagesInput}
+                                        onChange={(e) => setNewPost({ ...newPost, imagesInput: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-lg p-2 mb-2"
+                                        rows="2"
                                     />
                                     <input
                                         type="text"
                                         placeholder="Google Maps Link"
-                                        value={newPost.locationlink}
-                                        onChange={(e) => setNewPost({ ...newPost, locationlink: e.target.value })}
+                                        value={newPost.google_map_link}
+                                        onChange={(e) => setNewPost({ ...newPost, google_map_link: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg p-2 mb-2"
                                     />
+                                    <div className="flex flex-col gap-2 mb-2">
+                                        <label className="text-gray-600 font-medium" htmlFor="review-input">
+                                            Review (0-5)
+                                        </label>
+                                        <input
+                                            id="review-input"
+                                            type="number"
+                                            min="0"
+                                            max="5"
+                                            step="0.1"
+                                            placeholder="4.5"
+                                            value={newPost.review}
+                                            onChange={(e) => setNewPost({ ...newPost, review: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-2"
+                                        />
+                                    </div>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-gray-600">Rating:</span>
+                                        <span className="text-gray-600">Quick Rating:</span>
                                         {[1, 2, 3, 4, 5].map((star) => (
                                             <Star
                                                 key={star}
-                                                onClick={() => setNewPost({ ...newPost, rating: star })}
-                                                className={`w-6 h-6 cursor-pointer ${star <= newPost.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+                                                onClick={() => setNewPost({ ...newPost, review: star.toString() })}
+                                                className={`w-6 h-6 cursor-pointer ${star <= Number(newPost.review) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
                                                     }`}
                                             />
                                         ))}
@@ -202,8 +253,29 @@ const Feedpage = () => {
                         </div>
                     )}
 
+<div className="space-y-6 mb-5">
+    <h1>hi</h1>
+    <img src={pondImage} />
+
+</div>
+
                     {/* Feed posts */}
                     <div className="space-y-6">
+                        {error && (
+                            <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                                {error}
+                            </div>
+                        )}
+                        {loading && (
+                            <div className="p-4 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg">
+                                Loading places...
+                            </div>
+                        )}
+                        {!loading && posts.length === 0 && !error && (
+                            <div className="p-8 bg-white border border-dashed border-gray-300 rounded-xl text-center text-gray-500">
+                                No places have been shared yet. Be the first!
+                            </div>
+                        )}
                         {posts.map((post) => (
                             <article key={post.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                                 <div className="p-4 flex items-center gap-3">
@@ -211,7 +283,6 @@ const Feedpage = () => {
                                         <User className="w-6 h-6 text-white" />
                                     </div>
                                     <div className="flex-1">
-                                        <h7 className="font-semibold text-gray-900">{post.author}</h7>
                                         <h4 className="font-semibold text-gray-900">{post.place}</h4>
                                         <p className="text-sm text-gray-500 flex items-center gap-1">
                                             <MapPin className="w-3 h-3" />
@@ -235,7 +306,7 @@ const Feedpage = () => {
                                             <div className="flex items-center gap-2">
                                                 <div className="flex items-center">
                                                     {[...Array(5)].map((_, i) => {
-                                                        const filled = i < Math.floor(post.rating);
+                                                        const filled = i < Math.round(post.review ?? 0);
                                                         return (
                                                             <Star
                                                                 key={i}
@@ -244,7 +315,7 @@ const Feedpage = () => {
                                                         );
                                                     })}
                                                 </div>
-                                                <span className="text-sm font-semibold text-gray-900">{post.rating}</span>
+                                                <span className="text-sm font-semibold text-gray-900">{post.review}</span>
                                             </div>
                                             <div className="flex gap-2">
                                                 <button className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
