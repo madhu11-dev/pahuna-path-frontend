@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:8090";
+export const BASE_URL = "http://localhost:8090";
 
 const getHeaders = (isFormData = false) => {
   const token = localStorage.getItem("token");
