@@ -8,78 +8,95 @@ import background from "../../assets/images/login-bg.png";
 const RegisterPage = () => {
   const navigate = useNavigate();
 
-  const notifyRegisterSuccess = () =>
-    toast.success("User Account Created!", {
-      position: "top-right",
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: false,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
-  const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
-  const handleChange = (e) => {
-
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
+  const handleName = (e) => {
+    setName(e.target.value);
+    if (e.target.value.trim() !== "") setNameError("");
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.name) newErrors.name = "Name is required";
-    if (!formData.email) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(formData.email))
-      newErrors.email = "Enter a valid email";
-    if (!formData.password) newErrors.password = "Password is required";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-
-
+  const handleEmail = (e) => {
+    setEmail(e.target.value);
+    if (e.target.value.includes("@")) setEmailError("");
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  const handlePassword = (e) => {
+    setPassword(e.target.value);
+    if (e.target.value.trim() !== "") setPasswordError("");
+  };
 
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("name", formData.name);
-      formDataToSend.append("email", formData.email);
-      formDataToSend.append("password", formData.password);
+  const handleConfirmPassword = (e) => {
+    setConfirmPassword(e.target.value);
+    if (e.target.value.trim() !== "" && e.target.value === password) {
+      setConfirmPasswordError("");
+    }
+  };
 
-      const response = await registerUserApi(formDataToSend);
+  var validate = () => {
+    let isValid = true;
 
-
-      if (response.status === true) {
-        notifyRegisterSuccess();
-        // setTimeout(() => navigate("/login"), 2000);
-      }
-
-    } catch (err) {
-      if (err.isAxiosError && err.response) {
-      // Server returned 422 or other status
-      const data = err.response.data;
-      if (data.errors) {
-        const messages = Object.values(data.errors).flat().join(" ");
-        setServerError(messages);
-      } else {
-        setServerError(data.message || "Registration failed. Try again.");
-      }
+    if (name.trim() === "") {
+      setNameError("Name is required");
+      isValid = false;
     } else {
-      // Network or unexpected error
-      setServerError("Network error. Try again.");
+      setNameError("");
     }
+
+    if (email.trim() === "" || !email.includes("@")) {
+      setEmailError("Valid email is required");
+      isValid = false;
+    } else {
+      setEmailError("");
     }
+
+    if (password.trim() === "") {
+      setPasswordError("Password is required");
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    if (confirmPassword.trim() === "") {
+      setConfirmPasswordError("Confirm Password is required");
+      isValid = false;
+    } else if (confirmPassword.trim() !== password.trim()) {
+      setConfirmPasswordError("Passwords do not match");
+      isValid = false;
+    } else {
+      setConfirmPasswordError("");
+    }
+
+    return isValid;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    var isvalidated = validate();
+    if (!isvalidated) {
+      return;
+    }
+
+    const data = {
+      name: name,
+      email: email,
+      password: password,
+    };
+    registerUserApi(data).then((res) => {
+      if (res.data.success === false) {
+        toast.error(res.data.message);
+      } else {
+        toast.success(res.data.message);
+      }
+    });
   };
 
   return (
@@ -101,7 +118,7 @@ const RegisterPage = () => {
             </h1>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form className="space-y-8">
               {/* Name */}
               <div className="relative mt-4">
                 <input
@@ -109,8 +126,7 @@ const RegisterPage = () => {
                   name="name"
                   type="text"
                   autoComplete="off"
-                  value={formData.name}
-                  onChange={handleChange}
+                  onChange={handleName}
                   className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
                   placeholder="Name"
                 />
@@ -123,9 +139,7 @@ const RegisterPage = () => {
                 >
                   Name
                 </label>
-                {errors.name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-                )}
+                {nameError && <p className="text-danger">{nameError}</p>}
               </div>
 
               {/* Email */}
@@ -135,8 +149,7 @@ const RegisterPage = () => {
                   name="email"
                   type="email"
                   autoComplete="off"
-                  value={formData.email}
-                  onChange={handleChange}
+                  onChange={handleEmail}
                   className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
                   placeholder="Email"
                 />
@@ -149,9 +162,7 @@ const RegisterPage = () => {
                 >
                   Email Address
                 </label>
-                {errors.email && (
-                  <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-                )}
+                {emailError && <p className="text-danger">{emailError}</p>}
               </div>
 
               {/* Password */}
@@ -161,8 +172,7 @@ const RegisterPage = () => {
                   name="password"
                   type="password"
                   autoComplete="off"
-                  value={formData.password}
-                  onChange={handleChange}
+                  onChange={handlePassword}
                   className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
                   placeholder="Password"
                 />
@@ -175,17 +185,37 @@ const RegisterPage = () => {
                 >
                   Password
                 </label>
-                {errors.password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                {passwordError && (
+                  <p className="text-danger">{passwordError}</p>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="off"
+                  onChange={handleConfirmPassword}
+                  className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
+                  placeholder="Password"
+                />
+                <label
+                  htmlFor="password"
+                  className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
+                    peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
+                    peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
+                    peer-focus:text-sm"
+                >
+                  Confirm Password
+                </label>
+                {confirmPasswordError && (
+                  <p className="text-danger">{confirmPasswordError}</p>
                 )}
               </div>
 
-              {serverError && (
-                <p className="text-red-500 text-center">{serverError}</p>
-              )}
-
               <div className="relative">
                 <button
+                  onClick={handleSubmit}
                   type="submit"
                   className="w-full bg-green-500 hover:bg-green-700 text-white font-semibold rounded-md py-2 transition"
                 >

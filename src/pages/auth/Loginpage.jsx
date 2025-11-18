@@ -8,17 +8,17 @@ import background from "../../assets/images/login-bg.png";
 const Loginpage = () => {
   const navigate = useNavigate();
 
-  const notifyLoginSuccess = () =>
-    toast.success("Login Successful!", {
-      position: "top-right",
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: false,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
+  // const notifyLoginSuccess = () =>
+  //   toast.success("Login Successful!", {
+  //     position: "top-right",
+  //     autoClose: 5000,
+  //     hideProgressBar: false,
+  //     closeOnClick: false,
+  //     pauseOnHover: true,
+  //     draggable: true,
+  //     progress: undefined,
+  //     theme: "colored",
+  //   });
 
   const [formData, setFormData] = useState({
     email: "",
@@ -54,7 +54,7 @@ const Loginpage = () => {
       console.log(formDataToSend);
       const response = await loginUserApi(formDataToSend);
       if (response.status === true) {
-        notifyLoginSuccess();
+        // notifyLoginSuccess();
         setTimeout(() => navigate("/feed"), 2000);
       }
     } catch (err) {
