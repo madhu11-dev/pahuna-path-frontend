@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LogOut, MapPin, Star, UtensilsCrossed, Bookmark, User } from 'lucide-react';
-import { newlocation, getPlaces } from "../../apis/Api";
-import pondImage from '../../assets/images/pond.jpg';
+import { newlocation, getPlaces, BASE_URL } from "../../apis/Api";
 
 const Feedpage = () => {
     const [activeTab, setActiveTab] = useState('places');
@@ -14,24 +13,52 @@ const Feedpage = () => {
     const [newPost, setNewPost] = useState({
         place_name: '',
         caption: '',
-        imagesInput: '',
         google_map_link: '',
-        review: ''
+        review: '',
+        imageFiles: []
     });
+    const fileInputRef = useRef(null);
 
     const placeholderImage = 'https://img.notionusercontent.com/s3/prod-files-secure%2F216d903c-0d87-465d-a560-cf6430ae550c%2F5734a301-a916-4103-99a1-e467ee730991%2Fa-clean-and-minimal-logo-design-featurin_-9wbRjIfTDmxHWXT5bPqKQ_v-9kkumvQ2uk0chTWnJjHg-removebg-preview.png/size/w=1330?exp=1763462242&sig=vV99sbMq9PIRMklElGaFHJy_ozgfu-RcsSV2hz0pJrg&id=2a37fe74-ddc9-80cd-9edb-e42f134ca0e2&table=block';
 
-    const normalizePlace = (place) => ({
-        id: place.id,
-        image: place.images?.[0] || placeholderImage,
-        images: place.images || [],
-        caption: place.caption,
-        author: place.author || (place.user_id ? `User #${place.user_id}` : 'Traveler'),
-        place: place.place_name,
-        review: place.review ?? 0,
-        location: place.place_name,
-        locationlink: place.google_map_link || '#'
-    });
+    const resolveImageUrl = (imagePath) => {
+        if (!imagePath) return placeholderImage;
+
+        if (typeof imagePath !== 'string') {
+            return placeholderImage;
+        }
+
+        if (imagePath.startsWith('http')) {
+            return imagePath;
+        }
+
+        if (imagePath.startsWith('/')) {
+            return `${BASE_URL}${imagePath}`;
+        }
+
+        return `${BASE_URL}/assets/images/${imagePath}`;
+    };
+
+    const normalizePlace = (place) => {
+        const rawImages = Array.isArray(place.images)
+            ? place.images
+            : place.images
+                ? [place.images]
+                : [];
+        const images = rawImages.map(resolveImageUrl);
+
+        return {
+            id: place.id,
+            image: images[0] || placeholderImage,
+            images,
+            caption: place.caption,
+            author: place.author || (place.user_id ? `User #${place.user_id}` : 'Traveler'),
+            place: place.place_name,
+            review: place.review ?? 0,
+            location: place.place_name,
+            locationlink: place.google_map_link || '#'
+        };
+    };
 
     useEffect(() => {
         const fetchPlaces = async () => {
@@ -55,18 +82,13 @@ const Feedpage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!newPost.place_name || !newPost.caption || !newPost.imagesInput || !newPost.google_map_link) {
+        if (!newPost.place_name || !newPost.caption || !newPost.google_map_link) {
             alert('Please fill in all fields.');
             return;
         }
 
-        const parsedImages = newPost.imagesInput
-            .split(/[\n,]/)
-            .map((url) => url.trim())
-            .filter(Boolean);
-
-        if (!parsedImages.length) {
-            alert('Please provide at least one image URL.');
+        if (!newPost.imageFiles.length) {
+            alert('Please upload at least one image.');
             return;
         }
 
@@ -76,16 +98,15 @@ const Feedpage = () => {
             return;
         }
 
-        const payload = {
-            place_name: newPost.place_name,
-            caption: newPost.caption,
-            images: parsedImages,
-            review: reviewValue,
-            google_map_link: newPost.google_map_link
-        };
+        const formData = new FormData();
+        formData.append('place_name', newPost.place_name);
+        formData.append('caption', newPost.caption);
+        formData.append('review', reviewValue.toString());
+        formData.append('google_map_link', newPost.google_map_link);
+        newPost.imageFiles.forEach((file) => formData.append('images', file));
 
         try {
-            const response = await newlocation(payload);
+            const response = await newlocation(formData);
             const createdPlace = response?.data;
 
             if (createdPlace) {
@@ -102,10 +123,13 @@ const Feedpage = () => {
                 setNewPost({
                     place_name: '',
                     caption: '',
-                    imagesInput: '',
                     google_map_link: '',
-                    review: ''
+                    review: '',
+                    imageFiles: []
                 });
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
             } else {
                 alert("Failed to share place. Please try again.");
             }
@@ -191,13 +215,29 @@ const Feedpage = () => {
                                         className="w-full border border-gray-300 rounded-lg p-2 mb-1"
                                         rows="3"
                                     />
-                                    <textarea
-                                        placeholder="Image URLs (comma or newline separated)"
-                                        value={newPost.imagesInput}
-                                        onChange={(e) => setNewPost({ ...newPost, imagesInput: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 mb-2"
-                                        rows="2"
-                                    />
+                                    <div className="flex flex-col gap-2 mb-2">
+                                        <label className="text-gray-600 font-medium">
+                                            Upload Images
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            ref={fileInputRef}
+                                            onChange={(e) =>
+                                                setNewPost({
+                                                    ...newPost,
+                                                    imageFiles: Array.from(e.target.files || [])
+                                                })
+                                            }
+                                            className="w-full border border-gray-300 rounded-lg p-2 mb-2"
+                                        />
+                                        {newPost.imageFiles.length > 0 && (
+                                            <p className="text-sm text-gray-500">
+                                                {newPost.imageFiles.length} file{newPost.imageFiles.length > 1 ? 's' : ''} selected
+                                            </p>
+                                        )}
+                                    </div>
                                     <input
                                         type="text"
                                         placeholder="Google Maps Link"
@@ -252,12 +292,6 @@ const Feedpage = () => {
                             </div>
                         </div>
                     )}
-
-<div className="space-y-6 mb-5">
-    <h1>hi</h1>
-    <img src={pondImage} />
-
-</div>
 
                     {/* Feed posts */}
                     <div className="space-y-6">
