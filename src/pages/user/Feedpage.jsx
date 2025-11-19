@@ -19,7 +19,7 @@ const Feedpage = () => {
     });
     const fileInputRef = useRef(null);
 
-    const placeholderImage = 'https://img.notionusercontent.com/s3/prod-files-secure%2F216d903c-0d87-465d-a560-cf6430ae550c%2F5734a301-a916-4103-99a1-e467ee730991%2Fa-clean-and-minimal-logo-design-featurin_-9wbRjIfTDmxHWXT5bPqKQ_v-9kkumvQ2uk0chTWnJjHg-removebg-preview.png/size/w=1330?exp=1763462242&sig=vV99sbMq9PIRMklElGaFHJy_ozgfu-RcsSV2hz0pJrg&id=2a37fe74-ddc9-80cd-9edb-e42f134ca0e2&table=block';
+    const placeholderImage = '/logo.png';
 
     const resolveImageUrl = (imagePath) => {
         if (!imagePath) return placeholderImage;
@@ -103,11 +103,11 @@ const Feedpage = () => {
         formData.append('caption', newPost.caption);
         formData.append('review', reviewValue.toString());
         formData.append('google_map_link', newPost.google_map_link);
-        newPost.imageFiles.forEach((file) => formData.append('images', file));
+        newPost.imageFiles.forEach((file) => formData.append('images[]', file));
 
         try {
             const response = await newlocation(formData);
-            const createdPlace = response?.data;
+            const createdPlace = response?.data ?? response;
 
             if (createdPlace) {
                 alert("New place successfully shared!");
@@ -135,7 +135,9 @@ const Feedpage = () => {
             }
         } catch (error) {
             console.error("Error while posting new place:", error);
-            alert("Something went wrong while posting the place.");
+            const responseMessage = error?.response?.data?.message;
+            const validationMessage = Object.values(error?.response?.data?.errors ?? {})[0]?.[0];
+            alert(responseMessage || validationMessage || "Something went wrong while posting the place.");
         }
     };
 
@@ -144,7 +146,7 @@ const Feedpage = () => {
             <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
                 <div className="px-6 py-1 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <img className='w-25 h-20' src='https://img.notionusercontent.com/s3/prod-files-secure%2F216d903c-0d87-465d-a560-cf6430ae550c%2F5734a301-a916-4103-99a1-e467ee730991%2Fa-clean-and-minimal-logo-design-featurin_-9wbRjIfTDmxHWXT5bPqKQ_v-9kkumvQ2uk0chTWnJjHg-removebg-preview.png/size/w=1330?exp=1763462242&sig=vV99sbMq9PIRMklElGaFHJy_ozgfu-RcsSV2hz0pJrg&id=2a37fe74-ddc9-80cd-9edb-e42f134ca0e2&table=block'></img>
+                        <img className='w-25 h-20' src='/logo.png'></img>
                         <h1 className="text-2xl font-bold text-gray-900">Pahunapath</h1>
                     </div>
 
