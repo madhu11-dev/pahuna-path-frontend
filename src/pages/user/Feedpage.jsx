@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LogOut, MapPin, Star, UtensilsCrossed, Bookmark, User } from 'lucide-react';
 import { newlocation, getPlaces, BASE_URL } from "../../apis/Api";
+import { ToastContainer, toast } from "react-toastify";
 
 const Feedpage = () => {
     const [activeTab, setActiveTab] = useState('places');
@@ -83,18 +84,18 @@ const Feedpage = () => {
         e.preventDefault();
 
         if (!newPost.place_name || !newPost.caption || !newPost.google_map_link) {
-            alert('Please fill in all fields.');
+            toast.error('Please fill in all fields.');
             return;
         }
 
         if (!newPost.imageFiles.length) {
-            alert('Please upload at least one image.');
+            toast.error('Please upload at least one image.');
             return;
         }
 
         const reviewValue = parseFloat(newPost.review);
         if (Number.isNaN(reviewValue) || reviewValue < 0 || reviewValue > 5) {
-            alert('Review must be a number between 0 and 5.');
+            toast.error('Review must be a number between 0 and 5.');
             return;
         }
 
@@ -110,7 +111,7 @@ const Feedpage = () => {
             const createdPlace = response?.data ?? response;
 
             if (createdPlace) {
-                alert("New place successfully shared!");
+                toast.success("New place successfully shared!");
 
                 const normalizedPost = normalizePlace({
                     ...createdPlace,
@@ -373,6 +374,7 @@ const Feedpage = () => {
                     </div>
                 </main>
             </div>
+            <ToastContainer />
         </div>
     );
 }
