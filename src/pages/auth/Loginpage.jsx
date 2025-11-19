@@ -59,11 +59,16 @@ const LoginPage = () => {
     try {
       const data = { email, password };
       const res = await loginUserApi(data);
-
-      if (res.data.success === false) {
-        toast.error(res.data.message);
+      
+      console.log('res', res);
+      if (!res.success === false) {
+        toast.error(res.message);
       } else {
-        toast.success(res.data.message);
+        document.cookie = `auth_token=${res.token}; path=/; max-age=${24*60*60}`;
+        document.cookie = `user_id=${res.user['id']}; path=/; max-age=${24*60*60}`;
+        document.cookie = `user_name=${res.user['name']}; path=/; max-age=${24*60*60}`;
+        localStorage.setItem("utype", res.user['utype']);
+        toast.success(res.message);
         navigate("/feed"); // Redirect after login success
       }
     } catch (err) {
