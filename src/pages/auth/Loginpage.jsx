@@ -74,8 +74,7 @@ const LoginPage = () => {
       const data = { email, password };
       const res = await loginUserApi(data);
 
-      console.log("res", res);
-      if (!res.success === false) {
+      if (res.success === false) {
         toast.error(res.message);
       } else {
         document.cookie = `auth_token=${res.token}; path=/; max-age=${
