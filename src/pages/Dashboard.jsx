@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+// import { ImageReveal } from 'lightswind';
+
 
 const Dashboard = () => {
 
@@ -12,7 +14,7 @@ const Dashboard = () => {
         "https://images.pexels.com/photos/1531660/pexels-photo-1531660.jpeg",
         "https://images.unsplash.com/photo-1700366776973-20bda63d5b1a?auto=format&fit=crop&q=80&w=1740",
     ];
-
+    
     const [current, setCurrent] = useState(0);
 
     useEffect(() => {
@@ -80,9 +82,9 @@ const Dashboard = () => {
                         Find Nepal’s untouched trails, secret valleys, and authentic
                         cultural experiences shared by real travelers.
                     </p>
-                    <button 
-                    onClick={() => navigate("/login")}
-                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 md:px-10 py-3 md:py-4 rounded-full text-base md:text-lg transition-all duration-300 shadow-lg">
+                    <button
+                        onClick={() => navigate("/login")}
+                        className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 md:px-10 py-3 md:py-4 rounded-full text-base md:text-lg transition-all duration-300 shadow-lg">
                         Start Exploring
                     </button>
                 </div>
@@ -128,6 +130,7 @@ const Dashboard = () => {
                 </button>
             </section>
 
+
             {/* FOOTER */}
             <footer className="w-full bg-black text-white mt-20 py-16 px-6 md:px-8">
                 <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 text-center md:text-left">
@@ -147,11 +150,12 @@ const Dashboard = () => {
                         <h4 className="text-xl font-semibold mb-3 text-green-500">
                             Major Contributors
                         </h4>
+
                         <ul className="text-gray-300 space-y-2">
-                            <li>• </li>
-                            <li>• </li>
-                            <li>• </li>
-                            <li>• Saurav Basnet</li>
+                            <li>• Madhu Chaudhary</li>
+                            <li>• Rises Shrestha</li>
+                            <li>• Spandan Bhattarai </li>
+                            <li>• Suvani Basnet</li>
                         </ul>
                     </div>
 
