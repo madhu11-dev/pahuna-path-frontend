@@ -14,6 +14,20 @@ const LoginPage = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+  };
+
+  useEffect(() => {
+    const token = getCookie("auth_token");
+
+    if (token) {
+      navigate("/feed"); // already logged in -> redirect to feed page
+    }
+  }, []);
+
   const handleEmail = (e) => {
     setEmail(e.target.value);
     if (e.target.value.trim() !== "" && e.target.value.includes("@"))
@@ -60,10 +74,20 @@ const LoginPage = () => {
       const data = { email, password };
       const res = await loginUserApi(data);
 
-      if (res.data.success === false) {
-        toast.error(res.data.message);
+      if (res.success === false) {
+        toast.error(res.message);
       } else {
-        toast.success(res.data.message);
+        document.cookie = `auth_token=${res.token}; path=/; max-age=${
+          24 * 60 * 60
+        }`;
+        document.cookie = `user_id=${res.user["id"]}; path=/; max-age=${
+          24 * 60 * 60
+        }`;
+        document.cookie = `user_name=${res.user["name"]}; path=/; max-age=${
+          24 * 60 * 60
+        }`;
+        localStorage.setItem("utype", res.user["utype"]);
+        toast.success(res.message);
         navigate("/feed"); // Redirect after login success
       }
     } catch (err) {
