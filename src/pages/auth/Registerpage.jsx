@@ -88,10 +88,10 @@ const RegisterPage = () => {
 
     try {
       const res = await registerUserApi(data);
-      if (res.data.success === false) {
-        toast.error(res.data.message);
+      if (res?.status === false) {
+        toast.error(res?.message || "Registration failed");
       } else {
-        toast.success(res.data.message);
+        toast.success(res?.message || "Registered successfully!");
       }
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {
