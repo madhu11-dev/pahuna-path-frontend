@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Feedpage from "./pages/user/Feedpage";
 import AdminRoutes from "./protected_routes/AdminRoutes";
 import UserRoutes from "./protected_routes/UserRoutes";
+import Restaurants from "./pages/user/Restaurants";
 // import Accomodations from "./pages/user/Accomodations";
 
 const App = () => {
@@ -22,6 +23,7 @@ const App = () => {
 
         <Route element={<UserRoutes />}>
           <Route path="/feed" element={<Feedpage />} />
+          <Route path="/restaurants" element={<Restaurants />} />
           {/* <Route path="/accomodate" element={<Accomodations/>} /> */}
         </Route>
       </Routes>
