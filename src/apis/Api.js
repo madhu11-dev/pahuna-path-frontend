@@ -35,5 +35,7 @@ export const registerUserApi = (data) => post("/api/auth/register", data);
 export const loginUserApi = (data) => post("/api/auth/login", data);
 export const newlocation = (data) => post("/api/places", data);
 export const getPlaces = () => get("/api/places");
+export const newAccommodation = (data) => post("/api/accommodations", data);
+export const getAccommodations = () => get("/api/accommodations");
 
 

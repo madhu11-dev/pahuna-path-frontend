@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -22,6 +22,20 @@ const RegisterPage = () => {
     setName(e.target.value);
     if (e.target.value.trim() !== "") setNameError("");
   };
+
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+  };
+
+  useEffect(() => {
+    const token = getCookie("auth_token");
+
+    if (token) {
+      navigate("/feed"); // already logged in -> redirect to feed page
+    }
+  }, []);
 
   const handleEmail = (e) => {
     setEmail(e.target.value);

@@ -3,9 +3,23 @@ import { useNavigate } from "react-router-dom";
 // import { ImageReveal } from 'lightswind';
 
 
-const Dashboard = () => {
+const Landing = () => {
 
     const navigate = useNavigate();
+
+    const getCookie = (name) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(";").shift();
+    };
+
+    useEffect(() => {
+        const token = getCookie("auth_token");
+
+        if (token) {
+            navigate("/feed"); // already logged in -> redirect to feed page
+        }
+    }, []);
 
     const heroImages = [
         "https://images.pexels.com/photos/1531660/pexels-photo-1531660.jpeg",
@@ -14,7 +28,8 @@ const Dashboard = () => {
         "https://images.pexels.com/photos/1531660/pexels-photo-1531660.jpeg",
         "https://images.unsplash.com/photo-1700366776973-20bda63d5b1a?auto=format&fit=crop&q=80&w=1740",
     ];
-    
+
+
     const [current, setCurrent] = useState(0);
 
     useEffect(() => {
@@ -195,4 +210,4 @@ const FeatureCard = ({ icon, title, desc }) => (
     </div>
 );
 
-export default Dashboard;
+export default Landing;

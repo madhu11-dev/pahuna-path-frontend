@@ -1,18 +1,38 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, MapPin, Star, UtensilsCrossed, Bookmark, User } from 'lucide-react';
-import { newlocation, getPlaces, BASE_URL } from "../../apis/Api";
+import { useEffect, useRef, useState } from 'react';
+import { Star, User, MapPin } from 'lucide-react';
+import { newlocation, getPlaces } from "../../apis/Api";
 import { ToastContainer, toast } from "react-toastify";
+import UserSidebar from '../../components/user/UserSidebar';
+import UserNavbar from '../../components/user/UserNavbar';
+import { IMAGE_PLACEHOLDER, resolveImageUrl } from '../../utils/media';
+
+
+const normalizePlace = (place) => {
+    const rawImages = Array.isArray(place.images)
+        ? place.images
+        : place.images
+            ? [place.images]
+            : [];
+    const images = rawImages.map(resolveImageUrl);
+
+    return {
+        id: place.id,
+        name: place.place_name,
+        description: place.caption,
+        review: place.review ?? 0,
+        mapLink: place.google_map_link || '#',
+        location: place.place_name,
+        author: place.author || (place.user_id ? `User #${place.user_id}` : 'Traveler'),
+        image: images[0] || IMAGE_PLACEHOLDER,
+        images,
+    };
+};
 
 const Feedpage = () => {
-    const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('places');
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [username, setUsername] = useState('Traveler');
 
-    // Modal state
     const [showModal, setShowModal] = useState(false);
     const [newPost, setNewPost] = useState({
         place_name: '',
@@ -22,69 +42,6 @@ const Feedpage = () => {
         imageFiles: []
     });
     const fileInputRef = useRef(null);
-
-    const placeholderImage = '/logo.png';
-
-    const getCookie = useCallback((name) => {
-        if (typeof document === 'undefined') return null;
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) {
-            return parts.pop().split(';').shift();
-        }
-        return null;
-    }, []);
-
-    useEffect(() => {
-        const nameFromCookie = getCookie('user_name');
-        setUsername(nameFromCookie || 'Traveler');
-
-        const tokenFromCookie = getCookie('auth_token');
-        if (tokenFromCookie) {
-            localStorage.setItem('token', tokenFromCookie);
-        } else {
-            localStorage.removeItem('token');
-        }
-    }, [getCookie]);
-
-    const resolveImageUrl = (imagePath) => {
-        if (!imagePath) return placeholderImage;
-
-        if (typeof imagePath !== 'string') {
-            return placeholderImage;
-        }
-
-        if (imagePath.startsWith('http')) {
-            return imagePath;
-        }
-
-        if (imagePath.startsWith('/')) {
-            return `${BASE_URL}${imagePath}`;
-        }
-
-        return `${BASE_URL}/assets/images/${imagePath}`;
-    };
-
-    const normalizePlace = (place) => {
-        const rawImages = Array.isArray(place.images)
-            ? place.images
-            : place.images
-                ? [place.images]
-                : [];
-        const images = rawImages.map(resolveImageUrl);
-
-        return {
-            id: place.id,
-            image: images[0] || placeholderImage,
-            images,
-            caption: place.caption,
-            author: place.author || (place.user_id ? `User #${place.user_id}` : 'Traveler'),
-            place: place.place_name,
-            review: place.review ?? 0,
-            location: place.place_name,
-            locationlink: place.google_map_link || '#'
-        };
-    };
 
     useEffect(() => {
         const fetchPlaces = async () => {
@@ -104,16 +61,6 @@ const Feedpage = () => {
 
         fetchPlaces();
     }, []);
-
-    const handleLogout = useCallback(() => {
-        ['auth_token', 'user_id', 'user_name'].forEach((cookieName) => {
-            document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-        });
-        localStorage.removeItem('token');
-        localStorage.removeItem('utype');
-        toast.info('You have been logged out.');
-        navigate('/login');
-    }, [navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -179,92 +126,59 @@ const Feedpage = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
-                <div className="px-6 py-1 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                        <img className='w-25 h-20' src='/logo.png'></img>
-                        <h1 className="text-2xl font-bold text-gray-900">Pahunapath</h1>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <p className="text-sm sm:text-base text-gray-600 font-medium">
-                            Welcome, <span className="text-gray-900 font-semibold">{username}</span>
-                        </p>
-                        <button
-                            type="button"
-                            onClick={handleLogout}
-                            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            <span className="font-medium">Logout</span>
-                        </button>
-                    </div>
-                </div>
-            </header>
+            <UserNavbar />
 
             <div className="flex pt-20">
 
-                <aside className="w-64 bg-white border-r border-gray-200 fixed left-0 top-20 bottom-0 overflow-y-auto">
-                    <nav className="p-4">
-                        {['places', 'restaurants', 'bookings', 'profile'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === tab ? 'bg-emerald-50 text-emerald-600' : 'text-gray-700 hover:bg-gray-100'
-                                    }`}
-                            >
-                                {tab === 'places' && <MapPin className="w-5 h-5" />}
-                                {tab === 'restaurants' && <UtensilsCrossed className="w-5 h-5" />}
-                                {tab === 'bookings' && <Bookmark className="w-5 h-5" />}
-                                {tab === 'profile' && <User className="w-5 h-5" />}
-                                <span className="font-medium capitalize">{tab}</span>
-                            </button>
-                        ))}
-                    </nav>
-                </aside>
+                <UserSidebar active="places" />
 
                 <main className="ml-64 flex-1 px-8 py-6 max-w-4xl mx-auto">
 
-                    {/* Upload new post */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-                        <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
-                                <User className="w-6 h-6 text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <button
-                                    onClick={() => setShowModal(true)}
-                                    className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-500 transition-colors"
-                                >
-                                    Share your favorite place...
-                                </button>
-                            </div>
+                    {/* Add place button */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-800">Share a new place</h3>
+                            <p className="text-sm text-gray-500">Help other travelers discover your favorite spot.</p>
                         </div>
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                        >
+                            <User className="w-5 h-5" />
+                            <span>Add Place</span>
+                        </button>
                     </div>
 
-                    {/* Modal for adding new post */}
+                    {/* Add place modal */}
                     {showModal && (
-                        <div className=" inset-0 flex items-center justify-center z-50 p-6">
-                            <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-lg">
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
+                            <div className="bg-white p-6 rounded-xl w-full max-w-2xl shadow-lg max-h-[90vh] overflow-y-auto">
                                 <h2 className="text-xl font-semibold mb-4 text-gray-800">Share Your Favorite Place</h2>
                                 <form onSubmit={handleSubmit} className="space-y-4">
-                                    <input
-                                        type="text"
-                                        placeholder="Place Name"
-                                        value={newPost.place_name}
-                                        onChange={(e) => setNewPost({ ...newPost, place_name: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2s p-4 mb-2"
-                                    />
-                                    <textarea
-                                        placeholder="Caption"
-                                        value={newPost.caption}
-                                        onChange={(e) => setNewPost({ ...newPost, caption: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 mb-1"
-                                        rows="3"
-                                    />
-                                    <div className="flex flex-col gap-2 mb-2">
-                                        <label className="text-gray-600 font-medium">
-                                            Upload Images
-                                        </label>
+                                    <div>
+                                        <label className="block text-gray-700 font-medium mb-2">Place Name *</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Place Name"
+                                            value={newPost.place_name}
+                                            onChange={(e) => setNewPost({ ...newPost, place_name: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-3"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 font-medium mb-2">Caption *</label>
+                                        <textarea
+                                            placeholder="Share the story behind this place..."
+                                            value={newPost.caption}
+                                            onChange={(e) => setNewPost({ ...newPost, caption: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-3"
+                                            rows="3"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 font-medium mb-2">Upload Images *</label>
                                         <input
                                             type="file"
                                             accept="image/*"
@@ -276,27 +190,29 @@ const Feedpage = () => {
                                                     imageFiles: Array.from(e.target.files || [])
                                                 })
                                             }
-                                            className="w-full border border-gray-300 rounded-lg p-2 mb-2"
+                                            className="w-full border border-gray-300 rounded-lg p-3"
+                                            required
                                         />
                                         {newPost.imageFiles.length > 0 && (
-                                            <p className="text-sm text-gray-500">
+                                            <p className="text-sm text-gray-500 mt-2">
                                                 {newPost.imageFiles.length} file{newPost.imageFiles.length > 1 ? 's' : ''} selected
                                             </p>
                                         )}
                                     </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Google Maps Link"
-                                        value={newPost.google_map_link}
-                                        onChange={(e) => setNewPost({ ...newPost, google_map_link: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg p-2 mb-2"
-                                    />
-                                    <div className="flex flex-col gap-2 mb-2">
-                                        <label className="text-gray-600 font-medium" htmlFor="review-input">
-                                            Review (0-5)
-                                        </label>
+                                    <div>
+                                        <label className="block text-gray-700 font-medium mb-2">Google Maps Link *</label>
                                         <input
-                                            id="review-input"
+                                            type="url"
+                                            placeholder="https://maps.google.com/..."
+                                            value={newPost.google_map_link}
+                                            onChange={(e) => setNewPost({ ...newPost, google_map_link: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-3"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 font-medium mb-2">Review (0-5) *</label>
+                                        <input
                                             type="number"
                                             min="0"
                                             max="5"
@@ -304,34 +220,35 @@ const Feedpage = () => {
                                             placeholder="4.5"
                                             value={newPost.review}
                                             onChange={(e) => setNewPost({ ...newPost, review: e.target.value })}
-                                            className="w-full border border-gray-300 rounded-lg p-2"
+                                            className="w-full border border-gray-300 rounded-lg p-3"
+                                            required
                                         />
-                                    </div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-gray-600">Quick Rating:</span>
-                                        {[1, 2, 3, 4, 5].map((star) => (
-                                            <Star
-                                                key={star}
-                                                onClick={() => setNewPost({ ...newPost, review: star.toString() })}
-                                                className={`w-6 h-6 cursor-pointer ${star <= Number(newPost.review) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
-                                                    }`}
-                                            />
-                                        ))}
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-gray-600 text-sm">Quick Rating:</span>
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <Star
+                                                    key={star}
+                                                    onClick={() => setNewPost({ ...newPost, review: star.toString() })}
+                                                    className={`w-5 h-5 cursor-pointer ${star <= Number(newPost.review) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+                                                        }`}
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
 
-                                    <div className="flex justify-end gap-3 pt-2">
+                                    <div className="flex justify-end gap-3 pt-4">
                                         <button
                                             type="button"
                                             onClick={() => setShowModal(false)}
-                                            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                                            className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                                         >
                                             Cancel
                                         </button>
                                         <button
                                             type="submit"
-                                            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                                            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
                                         >
-                                            Post
+                                            Share Place
                                         </button>
                                     </div>
                                 </form>
@@ -341,6 +258,7 @@ const Feedpage = () => {
 
                     {/* Feed posts */}
                     <div className="space-y-6">
+                        {/* loading */}
                         {error && (
                             <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
                                 {error}
@@ -356,6 +274,8 @@ const Feedpage = () => {
                                 No places have been shared yet. Be the first!
                             </div>
                         )}
+
+                        {/* show list of posts */}
                         {posts.map((post) => (
                             <article key={post.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                                 <div className="p-4 flex items-center gap-3">
@@ -363,7 +283,7 @@ const Feedpage = () => {
                                         <User className="w-6 h-6 text-white" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900">{post.place}</h4>
+                                        <h4 className="font-semibold text-gray-900">{post.name}</h4>
                                         <p className="text-sm text-gray-500 flex items-center gap-1">
                                             <MapPin className="w-3 h-3" />
                                             {post.location}
@@ -371,16 +291,16 @@ const Feedpage = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex">
-                                    <div className="w-2/3">
+                                <div className="flex flex-col lg:flex-row">
+                                    <div className="lg:w-2/3">
                                         <img
                                             src={post.image}
-                                            alt={post.location}
-                                            className="w-full h-96 object-cover"
+                                            alt={post.name}
+                                            className="w-full h-80 object-cover"
                                         />
                                     </div>
-                                    <div className="w-1/3 p-6 flex flex-col">
-                                        <p className="text-gray-700 leading-relaxed mb-4">{post.caption}</p>
+                                    <div className="lg:w-1/3 p-6 flex flex-col">
+                                        <p className="text-gray-700 leading-relaxed mb-4">{post.description}</p>
 
                                         <div className="mt-auto space-y-3">
                                             <div className="flex items-center gap-2">
@@ -398,14 +318,16 @@ const Feedpage = () => {
                                                 <span className="text-sm font-semibold text-gray-900">{post.review}</span>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
-                                                    Explore
-                                                </button>
+                                                <a href={post.mapLink} target="_blank" rel="noopener noreferrer" className="flex-1">
+                                                    <button className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
+                                                        Explore
+                                                    </button>
+                                                </a>
                                             </div>
                                             <div className="flex gap-2">
-                                                <a href={post.locationlink} target="_blank" rel="noopener noreferrer" className="flex-1">
+                                                <a href={post.mapLink} target="_blank" rel="noopener noreferrer" className="flex-1">
                                                     <button className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
-                                                        Go To Place
+                                                        View on Maps
                                                     </button>
                                                 </a>
                                             </div>
