@@ -2,6 +2,10 @@ import { Route, Routes } from "react-router-dom";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import Loginpage from "./pages/auth/Loginpage";
 import Registerpage from "./pages/auth/Registerpage";
+
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
+
 import Landing from "./pages/Landing";
 import Feedpage from "./pages/user/Feedpage";
 import Accommodations from "./pages/user/Accommodations";
@@ -16,6 +20,8 @@ const App = () => {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Loginpage />} />
         <Route path="/register" element={<Registerpage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin" element={<AdminDashboard />} />
         <Route element={<AdminRoutes />}>
           {/* <Route path="/admin" element={<AdminDashboard />} /> */}
