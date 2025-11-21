@@ -2,17 +2,18 @@ import { Route, Routes } from "react-router-dom";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import Loginpage from "./pages/auth/Loginpage";
 import Registerpage from "./pages/auth/Registerpage";
-import Dashboard from "./pages/Dashboard";
+import Landing from "./pages/Landing";
 import Feedpage from "./pages/user/Feedpage";
+import Accommodations from "./pages/user/Accommodations";
+import Explore from "./pages/user/Explore";
 import AdminRoutes from "./protected_routes/AdminRoutes";
 import UserRoutes from "./protected_routes/UserRoutes";
-// import Accomodations from "./pages/user/Accomodations";
 
 const App = () => {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Loginpage />} />
         <Route path="/register" element={<Registerpage />} />
           <Route path="/admin" element={<AdminDashboard />} />
@@ -22,7 +23,8 @@ const App = () => {
 
         <Route element={<UserRoutes />}>
           <Route path="/feed" element={<Feedpage />} />
-          {/* <Route path="/accomodate" element={<Accomodations/>} /> */}
+          <Route path="/accommodations" element={<Accommodations />} />
+          <Route path="/explore" element={<Explore />} />
         </Route>
       </Routes>
     </>
