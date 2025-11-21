@@ -163,6 +163,15 @@ const LoginPage = () => {
                   <p className="text-danger">{passwordError}</p>
                 )}
               </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password")}
+                  className="text-sm text-green-600 hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
 
               <div className="relative">
                 <button
