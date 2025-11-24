@@ -86,6 +86,9 @@ const LoginPage = () => {
         document.cookie = `user_name=${res.user["name"]}; path=/; max-age=${
           24 * 60 * 60
         }`;
+        document.cookie = `user_profile_picture=${res.user["profile_picture_url"] || 'http://localhost:8090/images/default-profile.png'}; path=/; max-age=${
+          24 * 60 * 60
+        }`;
         localStorage.setItem("utype", res.user["utype"]);
         toast.success(res.message);
         navigate("/feed"); // Redirect after login success
