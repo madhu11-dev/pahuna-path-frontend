@@ -12,13 +12,20 @@ const getCookie = (name) => {
   return null;
 };
 
-const getHeaders = (isFormData = false) => {
+const getHeaders = (isFormData = false, isAdmin = false) => {
   const headers = {};
   
-  // Try to get token from cookie first, then localStorage
-  const tokenFromCookie = getCookie("auth_token");
-  const tokenFromStorage = localStorage.getItem("token");
-  const token = tokenFromCookie || tokenFromStorage;
+  // Get appropriate token based on user type
+  let token;
+  if (isAdmin) {
+    const adminTokenFromCookie = getCookie("admin_token");
+    const adminTokenFromStorage = localStorage.getItem("admin_token");
+    token = adminTokenFromCookie || adminTokenFromStorage;
+  } else {
+    const tokenFromCookie = getCookie("auth_token");
+    const tokenFromStorage = localStorage.getItem("token");
+    token = tokenFromCookie || tokenFromStorage;
+  }
   
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -31,12 +38,12 @@ const getHeaders = (isFormData = false) => {
   return headers;
 };
 
-const axiosApi = async ({ endpoint, method = "GET", data, isFormData = false }) => {
+const axiosApi = async ({ endpoint, method = "GET", data, isFormData = false, isAdmin = false }) => {
   try {
     const response = await axios({
       url: `${BASE_URL}${endpoint}`,
       method,
-      headers: getHeaders(isFormData),
+      headers: getHeaders(isFormData, isAdmin),
       data: isFormData ? data : data ? JSON.stringify(data) : undefined,
       withCredentials: true, // Include cookies in requests
     });
@@ -46,19 +53,19 @@ const axiosApi = async ({ endpoint, method = "GET", data, isFormData = false }) 
   }
 };
 
-const post = (endpoint, data) => {
+const post = (endpoint, data, isAdmin = false) => {
   const isFormData = data instanceof FormData;
-  return axiosApi({ endpoint, method: "POST", data, isFormData });
+  return axiosApi({ endpoint, method: "POST", data, isFormData, isAdmin });
 };
 
-const put = (endpoint, data) => {
+const put = (endpoint, data, isAdmin = false) => {
   const isFormData = data instanceof FormData;
-  return axiosApi({ endpoint, method: "PUT", data, isFormData });
+  return axiosApi({ endpoint, method: "PUT", data, isFormData, isAdmin });
 };
 
-const del = (endpoint) => axiosApi({ endpoint, method: "DELETE" });
+const del = (endpoint, isAdmin = false) => axiosApi({ endpoint, method: "DELETE", isAdmin });
 
-const get = (endpoint) => axiosApi({ endpoint });
+const get = (endpoint, isAdmin = false) => axiosApi({ endpoint, isAdmin });
 // Auth APIs
 export const registerUserApi = (data) => post("/api/auth/register", data);
 export const loginUserApi = (data) => post("/api/auth/login", data);
@@ -82,6 +89,14 @@ export const deletePlaceReview = (placeId, reviewId) => del(`/api/places/${place
 // Accommodations APIs
 export const newAccommodation = (data) => post("/api/accommodations", data);
 export const getAccommodations = () => get("/api/accommodations");
+
+// Admin APIs - using regular auth tokens
+export const adminLogoutApi = () => post("/api/admin/logout", {});
+export const getAdminInfoApi = () => get("/api/admin/me");
+export const getDashboardStatsApi = () => get("/api/admin/dashboard/stats");
+export const getAllUsersApi = () => get("/api/admin/users");
+export const getAllPlacesApi = () => get("/api/admin/places");
+export const getAllHotelsApi = () => get("/api/admin/hotels");
 
 // Legacy support (keeping old names for compatibility)
 export const newlocation = (data) => createPlace(data);
