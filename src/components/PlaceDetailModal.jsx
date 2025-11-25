@@ -149,7 +149,7 @@ const PlaceDetailModal = ({ placeId, isOpen, onClose }) => {
                                                     : 'border-gray-200'
                                             }`}
                                         >
-                                            <
+                                            <img
                                                 src={image}
                                                 alt={`Thumbnail ${index + 1}`}
                                                 className="w-full h-full object-cover"
