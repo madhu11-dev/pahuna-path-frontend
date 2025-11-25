@@ -129,3 +129,44 @@ const Feedpage = () => {
             toast.error(responseMessage || validationMessage || "Something went wrong while posting the place.");
         }
     };
+
+    const nextImage = (postId, totalImages) => {
+        setCurrentImageIndex(prev => ({
+            ...prev,
+            [postId]: ((prev[postId] || 0) + 1) % totalImages
+        }));
+    };
+
+    const prevImage = (postId, totalImages) => {
+        setCurrentImageIndex(prev => ({
+            ...prev,
+            [postId]: ((prev[postId] || 0) - 1 + totalImages) % totalImages
+        }));
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <UserNavbar />
+
+            <div className="flex pt-20">
+
+                <UserSidebar active="places" />
+
+                <main className="ml-64 flex-1 px-8 py-6 max-w-4xl mx-auto">
+
+                    {/* Add place button */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-800">Share a new place</h3>
+                            <p className="text-sm text-gray-500">Help other travelers discover your favorite spot.</p>
+                        </div>
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                        >
+                            <User className="w-5 h-5" />
+                            <span>Add Place</span>
+                        </button>
+                    </div>
+
+                    
