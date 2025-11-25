@@ -1,208 +1,374 @@
-import React, { useState, useMemo } from "react";
-import { Users, MapPin, BarChart3, Settings, Bell, Search, Trash2, Menu, X, Star } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Users, MapPin, Building2, BarChart3, Menu, Star, UserCheck } from "lucide-react";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-
-// --- Nepali Names & Users ---
-const nepaliNames = ["Sujan", "Anisha", "Bikash", "Sita", "Ram", "Gita", "Hari", "Rupa", "Dipesh", "Pooja"];
-const userImages = [
-  "https://i.pinimg.com/736x/ec/4a/75/ec4a751bfbd24c687d22aaf37f9e0802.jpg",
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQIVZGdb9DQHAX3LZB-OaNX3CAD6o3ll6b7XFr7RIxn54TEJ-h2UwtGLqmP4UihmQObAw&usqp=CAU"
-];
-
-// --- Places Data ---
-const placesDataInitial = [
-  { id: 1, name: "Mustang", category: "Adventure", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Kagdeni%2C_Mustang%2C_Nepal.jpg/1200px-Kagdeni%2C_Mustang%2C_Nepal.jpg", desc: "Breathtaking Himalayan views and remote villages." },
-  { id: 2, name: "Botanical Garden", category: "Nature", image: "https://floristicsco.com/cdn/shop/articles/thumbnail_8ef199d5-f1dd-4194-9f86-30a31a5e902c_1024x1024.jpg?v=1760003529", desc: "A paradise of flora, perfect for relaxation." },
-  { id: 3, name: "Pond", category: "Nature", image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKn0mi-eAVttnF1BB3_PACn4Cg7uBzbwojZw&s", desc: "Serene water body for picnics and boat rides." },
-  { id: 4, name: "Ansupa Lake", category: "Nature", image: "https://content.jdmagicbox.com/comp/cuttack/m3/0671px671.x671.190911015858.k7m3/catalogue/ansupa-lake-cuttack-city-cuttack-tourist-attraction-UM1bZ3YNi4.jpg", desc: "Beautiful lake surrounded by lush greenery." },
-  { id: 5, name: "Dahapa Dam Trek", category: "Adventure", image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGet82NNCtp7FC0WIMPmu34MO9eUy77FrE3g&s", desc: "Challenging trek with spectacular dam views." },
-  { id: 6, name: "Lake Side Pokhara", category: "Nature", image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2ulwCrpCmfEBIiWutIVuxZG08AoFwjqiWTPvNaomnTK6EzKzlwMY8aXRf8GgQEs0m0jo&usqp=CAU", desc: "Popular lakeside area with restaurants and beautiful lake views." }
-];
-
-// --- Generate Users ---
-const generateUsers = () => Array.from({ length: 10 }, (_, i) => ({
-  id: i+1,
-  name: nepaliNames[i % nepaliNames.length],
-  email: `${nepaliNames[i % nepaliNames.length].toLowerCase()}${i}@example.com`,
-  role: i === 0 ? "Admin" : "User", // Only one admin
-  avatar: userImages[i % userImages.length],
-  isBanned: i % 5 === 0
-}));
-
-// --- Generate Visits ---
-const generateVisits = (users, places) => {
-  const visits = [];
-  for(let i=0;i<30;i++){
-    const user = users[i % users.length];
-    const place = places[i % places.length];
-    visits.push({
-      id: i+1,
-      user,
-      place,
-      date: `2025-${String((i%12)+1).padStart(2,'0')}-` + String(10+(i%20)).padStart(2,'0'),
-      stars: Math.floor(Math.random()*5)+1
-    });
-  }
-  return visits;
-};
-
-// --- Reported Comments ---
-const reportedComments = [
-  { id: 1, user: "Bikash", comment: "Inappropriate image" },
-  { id: 2, user: "Gita", comment: "Spam comment here" }
-];
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import AdminSidebar from "../../components/AdminSidebar";
+import { 
+  getDashboardStatsApi, 
+  getAllUsersApi, 
+  getAllPlacesApi, 
+  getAllHotelsApi 
+} from "../../apis/Api";
 
 // --- Admin Dashboard ---
 const AdminDashboard = () => {
-  const [activeTab,setActiveTab]=useState("dashboard");
-  const [isSidebarOpen,setIsSidebarOpen]=useState(false);
-  const [usersData,setUsersData]=useState(generateUsers());
-  const [placesData,setPlacesData]=useState(placesDataInitial);
-  const [visitsData]=useState(generateVisits(usersData,placesData));
-  const [showBanned,setShowBanned]=useState(false);
-  const [showVisitors,setShowVisitors]=useState(false);
-  const [showComments,setShowComments]=useState(false);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState({
+    stats: {
+      total_users: 0,
+      total_visitors: 0,
+      total_places: 0,
+      total_hotels: 0,
+      total_reviews: 0
+    },
+    visitor_graph_data: []
+  });
+  const [users, setUsers] = useState([]);
+  const [places, setPlaces] = useState([]);
+  const [hotels, setHotels] = useState([]);
 
-  // Stats
-  const stats = useMemo(()=>[
-    { title: "Total Users", value: usersData.length },
-    { title: "Total Visitors", value: visitsData.length },
-    { title: "Reported Comments", value: reportedComments.length },
-    { title: "Banned Users", value: usersData.filter(u=>u.isBanned).length }
-  ],[usersData,visitsData]);
+  // Fetch dashboard data
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const statsResponse = await getDashboardStatsApi();
+      if (statsResponse.status) {
+        setDashboardStats(statsResponse.data);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      toast.error("Failed to load dashboard statistics");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Visitor graph per month
-  const visitorGraphData = Array.from({length:12},(_,i)=>({
-    month: new Date(2025,i,1).toLocaleString('default',{month:'short'}),
-    visits: Math.floor(Math.random()*20)+5
-  }));
+  // Fetch users data
+  const fetchUsers = async () => {
+    try {
+      const response = await getAllUsersApi();
+      if (response.status) {
+        setUsers(response.users);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load users");
+    }
+  };
+
+  // Fetch places data
+  const fetchPlaces = async () => {
+    try {
+      const response = await getAllPlacesApi();
+      if (response.status) {
+        setPlaces(response.places);
+      }
+    } catch (error) {
+      console.error("Error fetching places:", error);
+      toast.error("Failed to load places");
+    }
+  };
+
+  // Fetch hotels data
+  const fetchHotels = async () => {
+    try {
+      const response = await getAllHotelsApi();
+      if (response.status) {
+        setHotels(response.hotels);
+      }
+    } catch (error) {
+      console.error("Error fetching hotels:", error);
+      toast.error("Failed to load hotels");
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "users") {
+      fetchUsers();
+    } else if (activeTab === "places") {
+      fetchPlaces();
+    } else if (activeTab === "hotels") {
+      fetchHotels();
+    }
+  }, [activeTab]);
+
+  // Stats for dashboard
+  const stats = [
+    { 
+      title: "Total Users", 
+      value: dashboardStats.stats.total_users, 
+      icon: Users, 
+      color: "bg-blue-100 text-blue-700" 
+    },
+    { 
+      title: "Total Visitors", 
+      value: dashboardStats.stats.total_visitors, 
+      icon: UserCheck, 
+      color: "bg-green-100 text-green-700" 
+    },
+    { 
+      title: "Total Places", 
+      value: dashboardStats.stats.total_places, 
+      icon: MapPin, 
+      color: "bg-purple-100 text-purple-700" 
+    },
+    { 
+      title: "Total Hotels", 
+      value: dashboardStats.stats.total_hotels, 
+      icon: Building2, 
+      color: "bg-orange-100 text-orange-700" 
+    }
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50 font-sans items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans">
       {/* Sidebar */}
-      <aside className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-emerald-900 text-white flex flex-col z-50 transform transition-transform duration-300 shadow-2xl md:shadow-none ${isSidebarOpen?"translate-x-0":"-translate-x-full md:translate-x-0"}`}>
-        <div className="p-6 text-2xl font-extrabold border-b border-emerald-800 flex justify-between items-center">
-          Admin Panel
-          <button onClick={()=>setIsSidebarOpen(false)} className="md:hidden text-white/80 hover:text-white p-1 rounded"><X className="w-6 h-6"/></button>
-        </div>
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {["dashboard","places","visits","settings"].map(name=>(
-            <button key={name} onClick={()=>{setActiveTab(name);setIsSidebarOpen(false)}} className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-left transition duration-150 ${activeTab===name?"bg-emerald-700 text-white font-semibold shadow-inner":"hover:bg-emerald-700/60 text-emerald-100"}`}>
-              {name}
-            </button>
-          ))}
-        </nav>
-      </aside>
+      <AdminSidebar 
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+      />
 
       {/* Main */}
       <main className="flex-1 p-4 md:p-8 space-y-6">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="md:hidden mb-4 p-2 bg-emerald-900 text-white rounded-lg"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
         {/* Dashboard */}
-        {activeTab==="dashboard" && (
+        {activeTab === "dashboard" && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              {stats.map((s,i)=>(
-                <div key={i} className="p-6 bg-white rounded-xl shadow-lg flex items-center gap-4">
-                  <div className="p-3 bg-emerald-100 rounded-full"><Users className="w-6 h-6 text-emerald-700"/></div>
-                  <div>
-                    <p className="text-gray-500 text-sm font-medium">{s.title}</p>
-                    <p className="font-extrabold text-3xl text-emerald-900">{s.value}</p>
+              {stats.map((stat, i) => {
+                const IconComponent = stat.icon;
+                return (
+                  <div key={i} className="p-6 bg-white rounded-xl shadow-lg flex items-center gap-4">
+                    <div className={`p-3 ${stat.color} rounded-full`}>
+                      <IconComponent className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-sm font-medium">{stat.title}</p>
+                      <p className="font-extrabold text-3xl text-emerald-900">{stat.value}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="bg-white p-6 rounded-xl shadow-lg">
               <h2 className="text-xl font-bold text-emerald-800 mb-4">Visitors Graph 2025</h2>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={visitorGraphData}>
-                  <CartesianGrid stroke="#ccc"/>
-                  <XAxis dataKey="month"/>
-                  <YAxis/>
-                  <Tooltip/>
-                  <Line type="monotone" dataKey="visits" stroke="#22c55e" strokeWidth={3}/>
-                </LineChart>
-              </ResponsiveContainer>
+              {dashboardStats.visitor_graph_data.length > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={dashboardStats.visitor_graph_data}>
+                    <CartesianGrid stroke="#ccc" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="visits" stroke="#22c55e" strokeWidth={3} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  No visitor data available
+                </div>
+              )}
             </div>
           </>
         )}
 
         {/* Places */}
-        {activeTab==="places" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {placesData.map(p=>(
-              <div key={p.id} className="bg-white shadow-lg rounded-xl overflow-hidden">
-                <img src={p.image} alt={p.name} className="w-full h-40 object-cover"/>
-                <div className="p-4">
-                  <p className="font-bold text-lg text-gray-900">{p.name}</p>
-                  <p className="text-gray-600 text-sm mb-2">{p.desc}</p>
-                  <p className="text-sm text-gray-500">Category: {p.category}</p>
-                  <p className="text-sm text-gray-500 mt-1">Visitors: {visitsData.filter(v=>v.place.name===p.name).length}</p>
-                  <p className="text-yellow-400 mt-1 flex gap-1">
-                    {Array.from({length:Math.round(visitsData.filter(v=>v.place.name===p.name).reduce((acc,v)=>acc+v.stars,0)/Math.max(1,visitsData.filter(v=>v.place.name===p.name).length))}).map((_,i)=><Star key={i} className="w-4 h-4 fill-current"/>)}
-                  </p>
-                </div>
+        {activeTab === "places" && (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold text-gray-900">Places Management</h1>
+            {places.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {places.map((place) => (
+                  <div key={place.id} className="bg-white shadow-lg rounded-xl overflow-hidden">
+                    {place.image_url && (
+                      <img src={place.image_url} alt={place.name} className="w-full h-40 object-cover" />
+                    )}
+                    <div className="p-4">
+                      <p className="font-bold text-lg text-gray-900">{place.name}</p>
+                      <p className="text-gray-600 text-sm mb-2">{place.description}</p>
+                      <p className="text-sm text-gray-500 mt-1">Reviews: {place.review_count}</p>
+                      <div className="text-yellow-400 mt-1 flex gap-1 items-center">
+                        <span className="text-sm text-gray-600">Rating:</span>
+                        {Array.from({ length: Math.round(place.average_rating) }).map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                        <span className="text-sm text-gray-600 ml-1">({place.average_rating})</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">
+                        Added: {new Date(place.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+                <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No places available</p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Visits */}
-        {activeTab==="visits" && (
-          <div className="overflow-x-auto bg-white rounded-xl shadow-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3">ID</th>
-                  <th className="px-4 py-3">User</th>
-                  <th className="px-4 py-3">Place</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Stars</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visitsData.map(v=>(
-                  <tr key={v.id} className="hover:bg-emerald-50/20">
-                    <td className="px-4 py-2">{v.id}</td>
-                    <td className="px-4 py-2 flex items-center gap-2"><img src={v.user.avatar} className="w-6 h-6 rounded-full"/>{v.user.name}</td>
-                    <td className="px-4 py-2">{v.place.name}</td>
-                    <td className="px-4 py-2">{v.date}</td>
-                    <td className="px-4 py-2 flex gap-1 text-yellow-400">{Array.from({length:v.stars}).map((_,i)=><Star key={i} className="w-4 h-4 fill-current"/>)}</td>
-                  </tr>
+        {/* Hotels */}
+        {activeTab === "hotels" && (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold text-gray-900">Hotels Management</h1>
+            {hotels.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {hotels.map((hotel) => (
+                  <div key={hotel.id} className="bg-white shadow-lg rounded-xl overflow-hidden">
+                    {hotel.image_url && (
+                      <img src={hotel.image_url} alt={hotel.name} className="w-full h-40 object-cover" />
+                    )}
+                    <div className="p-4">
+                      <p className="font-bold text-lg text-gray-900">{hotel.name}</p>
+                      <p className="text-gray-600 text-sm mb-2">{hotel.description}</p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        Added: {new Date(hotel.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+                <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No hotels available (keeping count at 0 as requested)</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Users */}
+        {activeTab === "users" && (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
+            {users.length > 0 ? (
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          User
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Email
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Joined
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {users.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <img 
+                                className="h-10 w-10 rounded-full" 
+                                src={user.profile_picture_url} 
+                                alt={user.name} 
+                              />
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {user.email}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(user.created_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+                <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No users available</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Staff */}
+        {activeTab === "staff" && (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
+            <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+              <UserCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Staff management functionality coming soon</p>
+            </div>
           </div>
         )}
 
         {/* Settings */}
-        {activeTab==="settings" && (
-          <div className="bg-white p-6 rounded-xl shadow-lg space-y-4">
-            <h2 className="font-bold text-xl text-emerald-800">Settings Overview</h2>
-
-            <button onClick={()=>setShowBanned(!showBanned)} className="w-full text-left px-4 py-2 bg-red-100 rounded-lg">
-              Banned Users ({usersData.filter(u=>u.isBanned).length})
-            </button>
-            {showBanned && <ul className="pl-4 mt-2 space-y-1">{usersData.filter(u=>u.isBanned).map(u=><li key={u.id}>{u.name}</li>)}</ul>}
-
-            <button onClick={()=>setShowVisitors(!showVisitors)} className="w-full text-left px-4 py-2 bg-green-100 rounded-lg">
-              Total Visitors per Place
-            </button>
-            {showVisitors && <ul className="pl-4 mt-2 space-y-1">
-              {placesData.map(p=><li key={p.id}>{p.name}: {visitsData.filter(v=>v.place.name===p.name).length} visitors</li>)}
-            </ul>}
-
-            <button onClick={()=>setShowComments(!showComments)} className="w-full text-left px-4 py-2 bg-yellow-100 rounded-lg">
-              Reported Comments ({reportedComments.length})
-            </button>
-            {showComments && <ul className="pl-4 mt-2 space-y-1">
-              {reportedComments.map(r=><li key={r.id}>{r.user}: {r.comment}</li>)}
-            </ul>}
+        {activeTab === "settings" && (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+            <div className="bg-white p-6 rounded-xl shadow-lg space-y-4">
+              <h2 className="font-bold text-xl text-emerald-800">System Overview</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="font-semibold text-blue-800">Total Users</h3>
+                  <p className="text-2xl font-bold text-blue-600">{dashboardStats.stats.total_users}</p>
+                </div>
+                
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <h3 className="font-semibold text-green-800">Total Places</h3>
+                  <p className="text-2xl font-bold text-green-600">{dashboardStats.stats.total_places}</p>
+                </div>
+                
+                <div className="p-4 bg-orange-50 rounded-lg">
+                  <h3 className="font-semibold text-orange-800">Total Hotels</h3>
+                  <p className="text-2xl font-bold text-orange-600">{dashboardStats.stats.total_hotels}</p>
+                </div>
+                
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <h3 className="font-semibold text-purple-800">Total Reviews</h3>
+                  <p className="text-2xl font-bold text-purple-600">{dashboardStats.stats.total_reviews}</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
 
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/40 md:hidden z-40" onClick={()=>setIsSidebarOpen(false)}></div>}
+      <ToastContainer position="top-right" />
     </div>
-  )
+  );
 };
 
 export default AdminDashboard;
