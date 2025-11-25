@@ -22,11 +22,16 @@ const LoginPage = () => {
 
   useEffect(() => {
     const token = getCookie("auth_token");
+    const utype = localStorage.getItem("utype");
 
     if (token) {
-      navigate("/feed"); // already logged in -> redirect to feed page
+      if (utype === "ADM") {
+        navigate("/admin/dashboard"); // redirect admin to dashboard
+      } else {
+        navigate("/feed"); // redirect user to feed page
+      }
     }
-  }, []);
+  }, [navigate]);
 
   const handleEmail = (e) => {
     setEmail(e.target.value);
@@ -77,6 +82,7 @@ const LoginPage = () => {
       if (res.success === false) {
         toast.error(res.message);
       } else {
+        // Set cookies for both users and admins
         document.cookie = `auth_token=${res.token}; path=/; max-age=${
           24 * 60 * 60
         }`;
@@ -90,8 +96,29 @@ const LoginPage = () => {
           24 * 60 * 60
         }`;
         localStorage.setItem("utype", res.user["utype"]);
+        
+        // Set admin-specific cookies if user is admin
+        if (res.user["utype"] === "ADM") {
+          document.cookie = `admin_token=${res.token}; path=/; max-age=${
+            24 * 60 * 60
+          }`;
+          document.cookie = `admin_id=${res.user["id"]}; path=/; max-age=${
+            24 * 60 * 60
+          }`;
+          document.cookie = `admin_name=${res.user["name"]}; path=/; max-age=${
+            24 * 60 * 60
+          }`;
+          localStorage.setItem("admin_type", "ADMIN");
+        }
+        
         toast.success(res.message);
-        navigate("/feed"); // Redirect after login success
+        
+        // Redirect based on user type
+        if (res.user["utype"] === "ADM") {
+          navigate("/admin/dashboard"); // Redirect admin to dashboard
+        } else {
+          navigate("/feed"); // Redirect user to feed
+        }
       }
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {

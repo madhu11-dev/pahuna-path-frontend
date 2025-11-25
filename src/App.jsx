@@ -22,11 +22,14 @@ const App = () => {
         <Route path="/register" element={<Registerpage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+        
+        {/* Admin routes */}
         <Route element={<AdminRoutes />}>
-          {/* <Route path="/admin" element={<AdminDashboard />} /> */}
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Route>
 
+        {/* User routes */}
         <Route element={<UserRoutes />}>
           <Route path="/feed" element={<Feedpage />} />
           <Route path="/accommodations" element={<Accommodations />} />

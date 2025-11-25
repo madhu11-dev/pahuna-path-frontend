@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Users, MapPin, Building2, Star, BarChart3 } from "lucide-react";
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { getDashboardStatsApi } from "../apis/Api";
 // import { ImageReveal } from 'lightswind';
 
 
 const Landing = () => {
 
     const navigate = useNavigate();
+    const [stats, setStats] = useState({
+        total_users: 0,
+        total_visitors: 0,
+        total_places: 0,
+        total_hotels: 0, // Keep at 0 as requested
+        total_reviews: 0
+    });
+    const [visitorGraphData, setVisitorGraphData] = useState([]);
 
     const getCookie = (name) => {
         const value = `; ${document.cookie}`;
@@ -19,6 +30,34 @@ const Landing = () => {
         if (token) {
             navigate("/feed"); // already logged in -> redirect to feed page
         }
+    }, [navigate]);
+
+    // Fetch statistics for landing page
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const response = await getDashboardStatsApi();
+                if (response.status) {
+                    setStats({
+                        ...response.data.stats,
+                        total_hotels: 0 // Keep hotels at 0 as requested in todo
+                    });
+                    setVisitorGraphData(response.data.visitor_graph_data || []);
+                }
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+                // Set default empty data if API fails
+                setStats({
+                    total_users: 0,
+                    total_visitors: 0,
+                    total_places: 0,
+                    total_hotels: 0,
+                    total_reviews: 0
+                });
+            }
+        };
+
+        fetchStats();
     }, []);
 
     const heroImages = [
@@ -103,6 +142,87 @@ const Landing = () => {
                         Start Exploring
                     </button>
                 </div>
+            </section>
+
+            {/* STATISTICS SECTION */}
+            <section className="px-6 md:px-12 lg:px-16 py-16 md:py-24 max-w-7xl mx-auto">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
+                        Our Community in Numbers
+                    </h2>
+                    <p className="text-gray-600 text-lg">
+                        See how our community is growing and exploring Nepal together
+                    </p>
+                </div>
+                
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                    <StatCard
+                        icon={Users}
+                        title="Registered Users"
+                        value={stats.total_users}
+                        color="bg-blue-100 text-blue-700"
+                    />
+                    <StatCard
+                        icon={Star}
+                        title="Number of Visitors"
+                        value={stats.total_visitors}
+                        color="bg-green-100 text-green-700"
+                    />
+                    <StatCard
+                        icon={MapPin}
+                        title="Number of Places"
+                        value={stats.total_places}
+                        color="bg-purple-100 text-purple-700"
+                    />
+                    <StatCard
+                        icon={Building2}
+                        title="Number of Hotels"
+                        value={stats.total_hotels}
+                        color="bg-orange-100 text-orange-700"
+                    />
+                </div>
+
+                {/* Reviews Count */}
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center gap-3 bg-yellow-100 text-yellow-700 px-6 py-3 rounded-full">
+                        <Star className="w-6 h-6" />
+                        <span className="text-lg font-semibold">{stats.total_reviews} Reviews of Different Places</span>
+                    </div>
+                </div>
+
+                {/* Graph */}
+                {visitorGraphData.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">
+                            Monthly Visitor Trends 2025
+                        </h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={visitorGraphData}>
+                                <CartesianGrid stroke="#f0f0f0" />
+                                <XAxis 
+                                    dataKey="month" 
+                                    tick={{ fontSize: 12 }}
+                                />
+                                <YAxis tick={{ fontSize: 12 }} />
+                                <Tooltip 
+                                    contentStyle={{
+                                        backgroundColor: '#f8f9fa',
+                                        border: '1px solid #e9ecef',
+                                        borderRadius: '8px'
+                                    }}
+                                />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="visits" 
+                                    stroke="#22c55e" 
+                                    strokeWidth={3}
+                                    dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
             </section>
 
             {/* FEATURE SECTION */}
@@ -207,6 +327,17 @@ const FeatureCard = ({ icon, title, desc }) => (
         <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">{icon}</div>
         <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">{title}</h3>
         <p className="text-gray-600 text-sm sm:text-base">{desc}</p>
+    </div>
+);
+
+// Stats card component
+const StatCard = ({ icon: Icon, title, value, color }) => (
+    <div className="bg-white shadow-lg rounded-xl p-6 text-center border border-gray-100 hover:shadow-2xl transition-all duration-300">
+        <div className={`p-3 ${color} rounded-full w-fit mx-auto mb-4`}>
+            <Icon className="w-6 h-6" />
+        </div>
+        <h3 className="text-sm font-medium text-gray-600 mb-2">{title}</h3>
+        <p className="text-3xl font-bold text-gray-900">{value.toLocaleString()}</p>
     </div>
 );
 
