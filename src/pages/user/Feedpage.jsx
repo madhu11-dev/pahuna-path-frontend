@@ -1,13 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Star, User, MapPin, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
-import { createPlace, getPlaces, getPlaceReviews, createPlaceReview } from "../../apis/Api";
+import { createPlace, getPlaces } from "../../apis/Api";
 import { ToastContainer, toast } from "react-toastify";
 import UserSidebar from '../../components/user/UserSidebar';
 import UserNavbar from '../../components/user/UserNavbar';
 import PlaceDetailModal from '../../components/PlaceDetailModal';
-import ReviewModal from '../../components/ReviewModal';
 import { IMAGE_PLACEHOLDER, resolveImageUrl } from '../../utils/media';
 
+// Constants
+const MAX_DESCRIPTION_LENGTH = 2000;
+const MAX_IMAGES = 10;
+const DEFAULT_PROFILE_IMAGE = '/images/default-profile.png';
 
 const normalizePlace = (place) => {
     const rawImages = Array.isArray(place.images)
@@ -27,7 +30,7 @@ const normalizePlace = (place) => {
         location: place.place_name,
         author: place.user?.name || 'Anonymous',
         authorId: place.user?.id,
-        authorProfilePicture: place.user?.profile_picture_url || 'http://localhost:8090/images/default-profile.png',
+        authorProfilePicture: place.user?.profile_picture_url || DEFAULT_PROFILE_IMAGE,
         image: images[0] || IMAGE_PLACEHOLDER,
         images,
         latitude: place.latitude,
@@ -43,9 +46,8 @@ const Feedpage = () => {
     const [error, setError] = useState(null);
     const [currentImageIndex, setCurrentImageIndex] = useState({});
     const [selectedPlaceId, setSelectedPlaceId] = useState(null);
-    const [selectedPlaceForReview, setSelectedPlaceForReview] = useState(null);
-
     const [showModal, setShowModal] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [newPost, setNewPost] = useState({
         place_name: '',
         description: '',
@@ -54,24 +56,36 @@ const Feedpage = () => {
     });
     const fileInputRef = useRef(null);
 
-    useEffect(() => {
-        const fetchPlaces = async () => {
+    const fetchPlaces = useCallback(async (showLoadingState = true) => {
+        if (showLoadingState) {
             setLoading(true);
             setError(null);
-            try {
-                const response = await getPlaces();
-                const fetched = (response?.data || []).map(normalizePlace);
-                setPosts(fetched);
-            } catch (err) {
-                console.error("Failed to fetch places:", err);
-                setError('Unable to load places. Please try again later.');
-            } finally {
+        }
+        try {
+            const response = await getPlaces();
+            const fetched = (response?.data || []).map(normalizePlace);
+            setPosts(fetched);
+        } catch (err) {
+            console.error("Failed to fetch places:", err);
+            setError('Unable to load places. Please try again later.');
+        } finally {
+            if (showLoadingState) {
                 setLoading(false);
             }
-        };
-
-        fetchPlaces();
+        }
     }, []);
+
+    useEffect(() => {
+        fetchPlaces();
+    }, [fetchPlaces]);
+
+    // Cleanup object URLs when imageFiles change
+    useEffect(() => {
+        const urls = newPost.imageFiles.map(file => URL.createObjectURL(file));
+        return () => {
+            urls.forEach(url => URL.revokeObjectURL(url));
+        };
+    }, [newPost.imageFiles]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -86,6 +100,7 @@ const Feedpage = () => {
             return;
         }
 
+        setIsSubmitting(true);
         const formData = new FormData();
         formData.append('place_name', newPost.place_name);
         formData.append('description', newPost.description);
@@ -112,21 +127,16 @@ const Feedpage = () => {
                 }
 
                 // Refresh the places list to show the new place
-                try {
-                    const response = await getPlaces();
-                    const fetched = (response?.data || []).map(normalizePlace);
-                    setPosts(fetched);
-                } catch (err) {
-                    console.error("Failed to refresh places:", err);
-                }
+                await fetchPlaces(false);
             } else {
                 toast.error("Failed to share place. Please try again.");
             }
         } catch (error) {
             console.error("Error while posting new place:", error);
-            const responseMessage = error?.response?.data?.message;
-            const validationMessage = Object.values(error?.response?.data?.errors ?? {})[0]?.[0];
-            toast.error(responseMessage || validationMessage || "Something went wrong while posting the place.");
+            const errorMessage = error?.response?.data?.message || "Failed to share place. Please try again.";
+            toast.error(errorMessage);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -149,7 +159,6 @@ const Feedpage = () => {
             <UserNavbar />
 
             <div className="flex pt-20">
-
                 <UserSidebar active="places" />
 
                 <main className="ml-64 flex-1 px-8 py-6 max-w-4xl mx-auto">
@@ -194,15 +203,15 @@ const Feedpage = () => {
                                             onChange={(e) => setNewPost({ ...newPost, description: e.target.value })}
                                             className="w-full border border-gray-300 rounded-lg p-3"
                                             rows="4"
-                                            maxLength="2000"
+                                            maxLength={MAX_DESCRIPTION_LENGTH}
                                             required
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
-                                            {newPost.description.length}/2000 characters
+                                            {newPost.description.length}/{MAX_DESCRIPTION_LENGTH} characters
                                         </p>
                                     </div>
                                     <div>
-                                        <label className="block text-gray-700 font-medium mb-2">Upload Images * (Max 10 images)</label>
+                                        <label className="block text-gray-700 font-medium mb-2">Upload Images * (Max {MAX_IMAGES} images)</label>
                                         <input
                                             type="file"
                                             accept="image/*"
@@ -210,8 +219,8 @@ const Feedpage = () => {
                                             ref={fileInputRef}
                                             onChange={(e) => {
                                                 const files = Array.from(e.target.files || []);
-                                                if (files.length > 10) {
-                                                    toast.error('Maximum 10 images allowed');
+                                                if (files.length > MAX_IMAGES) {
+                                                    toast.error(`Maximum ${MAX_IMAGES} images allowed`);
                                                     return;
                                                 }
                                                 setNewPost({
@@ -263,7 +272,6 @@ const Feedpage = () => {
                                         />
                                     </div>
 
-
                                     <div className="flex justify-end gap-3 pt-4">
                                         <button
                                             type="button"
@@ -274,9 +282,10 @@ const Feedpage = () => {
                                         </button>
                                         <button
                                             type="submit"
-                                            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                                            disabled={isSubmitting}
+                                            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Share Place
+                                            {isSubmitting ? 'Sharing...' : 'Share Place'}
                                         </button>
                                     </div>
                                 </form>
@@ -313,7 +322,7 @@ const Feedpage = () => {
                                             alt={`${post.author}'s profile`}
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
-                                                e.target.src = '/images/default-profile.png';
+                                                e.target.src = DEFAULT_PROFILE_IMAGE;
                                             }}
                                         />
                                     </div>
@@ -347,12 +356,14 @@ const Feedpage = () => {
                                                         <button
                                                             onClick={() => prevImage(post.id, post.images.length)}
                                                             className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                                                            aria-label="Previous image"
                                                         >
                                                             <ChevronLeft className="w-5 h-5" />
                                                         </button>
                                                         <button
                                                             onClick={() => nextImage(post.id, post.images.length)}
                                                             className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                                                            aria-label="Next image"
                                                         >
                                                             <ChevronRight className="w-5 h-5" />
                                                         </button>
@@ -401,12 +412,6 @@ const Feedpage = () => {
                                                 >
                                                     Explore
                                                 </button>
-                                                <button 
-                                                    onClick={() => setSelectedPlaceForReview(post)}
-                                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                                                >
-                                                    Reviews ({post.reviewCount})
-                                                </button>
                                             </div>
                                             <div className="flex gap-2 mt-2">
                                                 <a href={post.mapLink} target="_blank" rel="noopener noreferrer" className="flex-1">
@@ -429,14 +434,6 @@ const Feedpage = () => {
                 placeId={selectedPlaceId}
                 isOpen={!!selectedPlaceId}
                 onClose={() => setSelectedPlaceId(null)}
-            />
-
-            {/* Review Modal */}
-            <ReviewModal 
-                placeId={selectedPlaceForReview?.id}
-                placeName={selectedPlaceForReview?.name}
-                isOpen={!!selectedPlaceForReview}
-                onClose={() => setSelectedPlaceForReview(null)}
             />
             
             <ToastContainer />
