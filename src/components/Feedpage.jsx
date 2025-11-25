@@ -169,4 +169,198 @@ const Feedpage = () => {
                         </button>
                     </div>
 
-                    
+                    {/* Add place modal */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
+                            <div className="bg-white p-6 rounded-xl w-full max-w-2xl shadow-lg max-h-[90vh] overflow-y-auto">
+                                <h2 className="text-xl font-semibold mb-4 text-gray-800">Share Your Favorite Place</h2>
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <div>
+                                        <label className="block text-gray-700 font-medium mb-2">Place Name *</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Place Name"
+                                            value={newPost.place_name}
+                                            onChange={(e) => setNewPost({ ...newPost, place_name: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-3"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 font-medium mb-2">Description *</label>
+                                        <textarea
+                                            placeholder="Share the story behind this place... Describe what makes it special, its history, your experience, or any tips for visitors."
+                                            value={newPost.description}
+                                            onChange={(e) => setNewPost({ ...newPost, description: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-3"
+                                            rows="4"
+                                            maxLength="2000"
+                                            required
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {newPost.description.length}/2000 characters
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 font-medium mb-2">Upload Images * (Max 10 images)</label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            ref={fileInputRef}
+                                            onChange={(e) => {
+                                                const files = Array.from(e.target.files || []);
+                                                if (files.length > 10) {
+                                                    toast.error('Maximum 10 images allowed');
+                                                    return;
+                                                }
+                                                setNewPost({
+                                                    ...newPost,
+                                                    imageFiles: files
+                                                });
+                                            }}
+                                            className="w-full border border-gray-300 rounded-lg p-3"
+                                            required
+                                        />
+                                        {newPost.imageFiles.length > 0 && (
+                                            <div className="mt-3">
+                                                <p className="text-sm text-gray-500 mb-2">
+                                                    {newPost.imageFiles.length} file{newPost.imageFiles.length > 1 ? 's' : ''} selected
+                                                </p>
+                                                <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                                                    {newPost.imageFiles.map((file, index) => (
+                                                        <div key={index} className="relative">
+                                                            <img 
+                                                                src={URL.createObjectURL(file)} 
+                                                                alt={`Preview ${index + 1}`}
+                                                                className="w-full h-16 object-cover rounded border"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const newFiles = newPost.imageFiles.filter((_, i) => i !== index);
+                                                                    setNewPost({ ...newPost, imageFiles: newFiles });
+                                                                }}
+                                                                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 font-medium mb-2">Google Maps Link *</label>
+                                        <input
+                                            type="url"
+                                            placeholder="https://maps.google.com/..."
+                                            value={newPost.google_map_link}
+                                            onChange={(e) => setNewPost({ ...newPost, google_map_link: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg p-3"
+                                            required
+                                        />
+                                    </div>
+
+
+                                    <div className="flex justify-end gap-3 pt-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowModal(false)}
+                                            className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                                        >
+                                            Share Place
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Feed posts */}
+                    <div className="space-y-6">
+                        {/* loading */}
+                        {error && (
+                            <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                                {error}
+                            </div>
+                        )}
+                        {loading && (
+                            <div className="p-4 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg">
+                                Loading places...
+                            </div>
+                        )}
+                        {!loading && posts.length === 0 && !error && (
+                            <div className="p-8 bg-white border border-dashed border-gray-300 rounded-xl text-center text-gray-500">
+                                No places have been shared yet. Be the first!
+                            </div>
+                        )}
+
+                        {/* show list of posts */}
+                        {posts.map((post) => (
+                            <article key={post.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                                <div className="p-4 flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200">
+                                        <img
+                                            src={post.authorProfilePicture}
+                                            alt={`${post.author}'s profile`}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                e.target.src = '/images/default-profile.png';
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-semibold text-gray-900">{post.author}</h4>
+                                            <span className="text-gray-400">•</span>
+                                            <span className="text-sm text-gray-500">
+                                                {new Date(post.createdAt).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <h5 className="font-medium text-gray-800">{post.name}</h5>
+                                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                                            <MapPin className="w-3 h-3" />
+                                            {post.location}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col lg:flex-row">
+                                    <div className="lg:w-2/3 relative">
+                                        {post.images && post.images.length > 0 ? (
+                                            <>
+                                                <img
+                                                    src={post.images[currentImageIndex[post.id] || 0]}
+                                                    alt={`${post.name} - Image ${(currentImageIndex[post.id] || 0) + 1}`}
+                                                    className="w-full h-80 object-cover"
+                                                />
+                                                {post.images.length > 1 && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => prevImage(post.id, post.images.length)}
+                                                            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                                                        >
+                                                            <ChevronLeft className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => nextImage(post.id, post.images.length)}
+                                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                                                        >
+                                                            <ChevronRight className="w-5 h-5" />
+                                                        </button>
+                                                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-black bg-opacity-50 px-3 py-1 rounded-full">
+                                                            <ImageIcon className="w-4 h-4 text-white" />
+                                                            <span className="text-white text-sm">
+                                                                {(currentImageIndex[post.id] || 0) + 1} / {post.images.length}
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                )}
