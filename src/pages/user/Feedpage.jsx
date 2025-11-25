@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Star, User, MapPin } from 'lucide-react';
-import { newlocation, getPlaces } from "../../apis/Api";
+import { Star, User, MapPin, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { createPlace, getPlaces, getPlaceReviews, createPlaceReview } from "../../apis/Api";
 import { ToastContainer, toast } from "react-toastify";
 import UserSidebar from '../../components/user/UserSidebar';
 import UserNavbar from '../../components/user/UserNavbar';
+import PlaceDetailModal from '../../components/PlaceDetailModal';
+import ReviewModal from '../../components/ReviewModal';
 import { IMAGE_PLACEHOLDER, resolveImageUrl } from '../../utils/media';
 
 
@@ -18,13 +20,20 @@ const normalizePlace = (place) => {
     return {
         id: place.id,
         name: place.place_name,
-        description: place.caption,
-        review: place.review ?? 0,
+        description: place.description,
+        averageRating: place.average_rating ?? 0,
+        reviewCount: place.review_count ?? 0,
         mapLink: place.google_map_link || '#',
         location: place.place_name,
-        author: place.author || (place.user_id ? `User #${place.user_id}` : 'Traveler'),
+        author: place.user?.name || 'Anonymous',
+        authorId: place.user?.id,
+        authorProfilePicture: place.user?.profile_picture_url || 'http://localhost:8090/images/default-profile.png',
         image: images[0] || IMAGE_PLACEHOLDER,
         images,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        createdAt: place.created_at,
+        reviews: place.reviews || [],
     };
 };
 
@@ -32,13 +41,15 @@ const Feedpage = () => {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [currentImageIndex, setCurrentImageIndex] = useState({});
+    const [selectedPlaceId, setSelectedPlaceId] = useState(null);
+    const [selectedPlaceForReview, setSelectedPlaceForReview] = useState(null);
 
     const [showModal, setShowModal] = useState(false);
     const [newPost, setNewPost] = useState({
         place_name: '',
-        caption: '',
+        description: '',
         google_map_link: '',
-        review: '',
         imageFiles: []
     });
     const fileInputRef = useRef(null);
@@ -65,7 +76,7 @@ const Feedpage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!newPost.place_name || !newPost.caption || !newPost.google_map_link) {
+        if (!newPost.place_name || !newPost.description || !newPost.google_map_link) {
             toast.error('Please fill in all fields.');
             return;
         }
@@ -75,53 +86,62 @@ const Feedpage = () => {
             return;
         }
 
-        const reviewValue = parseFloat(newPost.review);
-        if (Number.isNaN(reviewValue) || reviewValue < 0 || reviewValue > 5) {
-            toast.error('Review must be a number between 0 and 5.');
-            return;
-        }
-
         const formData = new FormData();
         formData.append('place_name', newPost.place_name);
-        formData.append('caption', newPost.caption);
-        formData.append('review', reviewValue.toString());
+        formData.append('description', newPost.description);
         formData.append('google_map_link', newPost.google_map_link);
         newPost.imageFiles.forEach((file) => formData.append('images[]', file));
 
         try {
-            const response = await newlocation(formData);
+            const response = await createPlace(formData);
             const createdPlace = response?.data ?? response;
 
             if (createdPlace) {
                 toast.success("New place successfully shared!");
 
-                const normalizedPost = normalizePlace({
-                    ...createdPlace,
-                    author: 'You'
-                });
-
-                setPosts((prev) => [normalizedPost, ...prev]);
-
+                // Close modal and reset form
                 setShowModal(false);
                 setNewPost({
                     place_name: '',
-                    caption: '',
+                    description: '',
                     google_map_link: '',
-                    review: '',
                     imageFiles: []
                 });
                 if (fileInputRef.current) {
                     fileInputRef.current.value = '';
                 }
+
+                // Refresh the places list to show the new place
+                try {
+                    const response = await getPlaces();
+                    const fetched = (response?.data || []).map(normalizePlace);
+                    setPosts(fetched);
+                } catch (err) {
+                    console.error("Failed to refresh places:", err);
+                }
             } else {
-                alert("Failed to share place. Please try again.");
+                toast.error("Failed to share place. Please try again.");
             }
         } catch (error) {
             console.error("Error while posting new place:", error);
             const responseMessage = error?.response?.data?.message;
             const validationMessage = Object.values(error?.response?.data?.errors ?? {})[0]?.[0];
-            alert(responseMessage || validationMessage || "Something went wrong while posting the place.");
+            toast.error(responseMessage || validationMessage || "Something went wrong while posting the place.");
         }
+    };
+
+    const nextImage = (postId, totalImages) => {
+        setCurrentImageIndex(prev => ({
+            ...prev,
+            [postId]: ((prev[postId] || 0) + 1) % totalImages
+        }));
+    };
+
+    const prevImage = (postId, totalImages) => {
+        setCurrentImageIndex(prev => ({
+            ...prev,
+            [postId]: ((prev[postId] || 0) - 1 + totalImages) % totalImages
+        }));
     };
 
     return (
@@ -167,36 +187,68 @@ const Feedpage = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-gray-700 font-medium mb-2">Caption *</label>
+                                        <label className="block text-gray-700 font-medium mb-2">Description *</label>
                                         <textarea
-                                            placeholder="Share the story behind this place..."
-                                            value={newPost.caption}
-                                            onChange={(e) => setNewPost({ ...newPost, caption: e.target.value })}
+                                            placeholder="Share the story behind this place... Describe what makes it special, its history, your experience, or any tips for visitors."
+                                            value={newPost.description}
+                                            onChange={(e) => setNewPost({ ...newPost, description: e.target.value })}
                                             className="w-full border border-gray-300 rounded-lg p-3"
-                                            rows="3"
+                                            rows="4"
+                                            maxLength="2000"
                                             required
                                         />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {newPost.description.length}/2000 characters
+                                        </p>
                                     </div>
                                     <div>
-                                        <label className="block text-gray-700 font-medium mb-2">Upload Images *</label>
+                                        <label className="block text-gray-700 font-medium mb-2">Upload Images * (Max 10 images)</label>
                                         <input
                                             type="file"
                                             accept="image/*"
                                             multiple
                                             ref={fileInputRef}
-                                            onChange={(e) =>
+                                            onChange={(e) => {
+                                                const files = Array.from(e.target.files || []);
+                                                if (files.length > 10) {
+                                                    toast.error('Maximum 10 images allowed');
+                                                    return;
+                                                }
                                                 setNewPost({
                                                     ...newPost,
-                                                    imageFiles: Array.from(e.target.files || [])
-                                                })
-                                            }
+                                                    imageFiles: files
+                                                });
+                                            }}
                                             className="w-full border border-gray-300 rounded-lg p-3"
                                             required
                                         />
                                         {newPost.imageFiles.length > 0 && (
-                                            <p className="text-sm text-gray-500 mt-2">
-                                                {newPost.imageFiles.length} file{newPost.imageFiles.length > 1 ? 's' : ''} selected
-                                            </p>
+                                            <div className="mt-3">
+                                                <p className="text-sm text-gray-500 mb-2">
+                                                    {newPost.imageFiles.length} file{newPost.imageFiles.length > 1 ? 's' : ''} selected
+                                                </p>
+                                                <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                                                    {newPost.imageFiles.map((file, index) => (
+                                                        <div key={index} className="relative">
+                                                            <img 
+                                                                src={URL.createObjectURL(file)} 
+                                                                alt={`Preview ${index + 1}`}
+                                                                className="w-full h-16 object-cover rounded border"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const newFiles = newPost.imageFiles.filter((_, i) => i !== index);
+                                                                    setNewPost({ ...newPost, imageFiles: newFiles });
+                                                                }}
+                                                                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                     <div>
@@ -210,31 +262,7 @@ const Feedpage = () => {
                                             required
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-gray-700 font-medium mb-2">Review (0-5) *</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="5"
-                                            step="0.1"
-                                            placeholder="4.5"
-                                            value={newPost.review}
-                                            onChange={(e) => setNewPost({ ...newPost, review: e.target.value })}
-                                            className="w-full border border-gray-300 rounded-lg p-3"
-                                            required
-                                        />
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className="text-gray-600 text-sm">Quick Rating:</span>
-                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                <Star
-                                                    key={star}
-                                                    onClick={() => setNewPost({ ...newPost, review: star.toString() })}
-                                                    className={`w-5 h-5 cursor-pointer ${star <= Number(newPost.review) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
-                                                        }`}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
+
 
                                     <div className="flex justify-end gap-3 pt-4">
                                         <button
@@ -279,11 +307,25 @@ const Feedpage = () => {
                         {posts.map((post) => (
                             <article key={post.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                                 <div className="p-4 flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
-                                        <User className="w-6 h-6 text-white" />
+                                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200">
+                                        <img
+                                            src={post.authorProfilePicture}
+                                            alt={`${post.author}'s profile`}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                e.target.src = '/images/default-profile.png';
+                                            }}
+                                        />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900">{post.name}</h4>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-semibold text-gray-900">{post.author}</h4>
+                                            <span className="text-gray-400">•</span>
+                                            <span className="text-sm text-gray-500">
+                                                {new Date(post.createdAt).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <h5 className="font-medium text-gray-800">{post.name}</h5>
                                         <p className="text-sm text-gray-500 flex items-center gap-1">
                                             <MapPin className="w-3 h-3" />
                                             {post.location}
@@ -292,12 +334,42 @@ const Feedpage = () => {
                                 </div>
 
                                 <div className="flex flex-col lg:flex-row">
-                                    <div className="lg:w-2/3">
-                                        <img
-                                            src={post.image}
-                                            alt={post.name}
-                                            className="w-full h-80 object-cover"
-                                        />
+                                    <div className="lg:w-2/3 relative">
+                                        {post.images && post.images.length > 0 ? (
+                                            <>
+                                                <img
+                                                    src={post.images[currentImageIndex[post.id] || 0]}
+                                                    alt={`${post.name} - Image ${(currentImageIndex[post.id] || 0) + 1}`}
+                                                    className="w-full h-80 object-cover"
+                                                />
+                                                {post.images.length > 1 && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => prevImage(post.id, post.images.length)}
+                                                            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                                                        >
+                                                            <ChevronLeft className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => nextImage(post.id, post.images.length)}
+                                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                                                        >
+                                                            <ChevronRight className="w-5 h-5" />
+                                                        </button>
+                                                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-black bg-opacity-50 px-3 py-1 rounded-full">
+                                                            <ImageIcon className="w-4 h-4 text-white" />
+                                                            <span className="text-white text-sm">
+                                                                {(currentImageIndex[post.id] || 0) + 1} / {post.images.length}
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div className="w-full h-80 bg-gray-200 flex items-center justify-center">
+                                                <span className="text-gray-500">No image available</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="lg:w-1/3 p-6 flex flex-col">
                                         <p className="text-gray-700 leading-relaxed mb-4">{post.description}</p>
@@ -306,7 +378,7 @@ const Feedpage = () => {
                                             <div className="flex items-center gap-2">
                                                 <div className="flex items-center">
                                                     {[...Array(5)].map((_, i) => {
-                                                        const filled = i < Math.round(post.review ?? 0);
+                                                        const filled = i < Math.round(post.averageRating ?? 0);
                                                         return (
                                                             <Star
                                                                 key={i}
@@ -315,18 +387,30 @@ const Feedpage = () => {
                                                         );
                                                     })}
                                                 </div>
-                                                <span className="text-sm font-semibold text-gray-900">{post.review}</span>
+                                                <span className="text-sm font-semibold text-gray-900">
+                                                    {post.averageRating.toFixed(1)}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                    ({post.reviewCount} review{post.reviewCount !== 1 ? 's' : ''})
+                                                </span>
                                             </div>
                                             <div className="flex gap-2">
-                                                <a href={post.mapLink} target="_blank" rel="noopener noreferrer" className="flex-1">
-                                                    <button className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
-                                                        Explore
-                                                    </button>
-                                                </a>
+                                                <button 
+                                                    onClick={() => setSelectedPlaceId(post.id)}
+                                                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                                                >
+                                                    Explore
+                                                </button>
+                                                <button 
+                                                    onClick={() => setSelectedPlaceForReview(post)}
+                                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                                >
+                                                    Reviews ({post.reviewCount})
+                                                </button>
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-2 mt-2">
                                                 <a href={post.mapLink} target="_blank" rel="noopener noreferrer" className="flex-1">
-                                                    <button className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
+                                                    <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium">
                                                         View on Maps
                                                     </button>
                                                 </a>
@@ -339,6 +423,22 @@ const Feedpage = () => {
                     </div>
                 </main>
             </div>
+            
+            {/* Place Detail Modal */}
+            <PlaceDetailModal 
+                placeId={selectedPlaceId}
+                isOpen={!!selectedPlaceId}
+                onClose={() => setSelectedPlaceId(null)}
+            />
+
+            {/* Review Modal */}
+            <ReviewModal 
+                placeId={selectedPlaceForReview?.id}
+                placeName={selectedPlaceForReview?.name}
+                isOpen={!!selectedPlaceForReview}
+                onClose={() => setSelectedPlaceForReview(null)}
+            />
+            
             <ToastContainer />
         </div>
     );
