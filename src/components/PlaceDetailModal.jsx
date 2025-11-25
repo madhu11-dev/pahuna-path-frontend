@@ -217,19 +217,7 @@ const PlaceDetailModal = ({ placeId, isOpen, onClose }) => {
                     </div>
 
                     {/* Reviews Section */}
-                    <div className="border-t pt-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold flex items-center gap-2">
-                                <MessageSquare className="w-5 h-5" />
-                                Reviews ({reviews.length})
-                            </h3>
-                            <button
-                                onClick={() => setShowReviewForm(!showReviewForm)}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-                            >
-                                Add Review
-                            </button>
-                        </div>
+                    
 
                         {/* Review Form */}
                         {showReviewForm && (
