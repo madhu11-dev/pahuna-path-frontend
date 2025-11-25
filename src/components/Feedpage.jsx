@@ -86,4 +86,46 @@ const Feedpage = () => {
             return;
         }
 
-  
+        const formData = new FormData();
+        formData.append('place_name', newPost.place_name);
+        formData.append('description', newPost.description);
+        formData.append('google_map_link', newPost.google_map_link);
+        newPost.imageFiles.forEach((file) => formData.append('images[]', file));
+
+        try {
+            const response = await createPlace(formData);
+            const createdPlace = response?.data ?? response;
+
+            if (createdPlace) {
+                toast.success("New place successfully shared!");
+
+                // Close modal and reset form
+                setShowModal(false);
+                setNewPost({
+                    place_name: '',
+                    description: '',
+                    google_map_link: '',
+                    imageFiles: []
+                });
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+
+                // Refresh the places list to show the new place
+                try {
+                    const response = await getPlaces();
+                    const fetched = (response?.data || []).map(normalizePlace);
+                    setPosts(fetched);
+                } catch (err) {
+                    console.error("Failed to refresh places:", err);
+                }
+            } else {
+                toast.error("Failed to share place. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error while posting new place:", error);
+            const responseMessage = error?.response?.data?.message;
+            const validationMessage = Object.values(error?.response?.data?.errors ?? {})[0]?.[0];
+            toast.error(responseMessage || validationMessage || "Something went wrong while posting the place.");
+        }
+    };
