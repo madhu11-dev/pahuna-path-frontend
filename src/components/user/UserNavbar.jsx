@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { logoutUserApi } from '../../apis/Api';
+import { logoutUserApi } from '../../apis/Api.js';
 
 const UserNavbar = () => {
     const navigate = useNavigate();
