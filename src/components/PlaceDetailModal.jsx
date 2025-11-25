@@ -232,7 +232,69 @@ const PlaceDetailModal = ({ placeId, isOpen, onClose }) => {
                         </div>
 
                         {/* Review Form */}
-                       
+                        {showReviewForm && (
+                            <form onSubmit={handleSubmitReview} className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Rating *
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <button
+                                                key={star}
+                                                type="button"
+                                                onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                                                className="focus:outline-none"
+                                            >
+                                                <Star
+                                                    className={`w-6 h-6 ${
+                                                        star <= reviewForm.rating
+                                                            ? 'text-yellow-400 fill-yellow-400'
+                                                            : 'text-gray-300'
+                                                    } hover:text-yellow-400 transition-colors`}
+                                                />
+                                            </button>
+                                        ))}
+                                        <span className="ml-2 text-sm text-gray-600">
+                                            {reviewForm.rating} star{reviewForm.rating !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Comment (Optional)
+                                    </label>
+                                    <textarea
+                                        value={reviewForm.comment}
+                                        onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                                        placeholder="Share your experience about this place..."
+                                        className="w-full border border-gray-300 rounded-lg p-3"
+                                        rows="3"
+                                        maxLength="1000"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {reviewForm.comment.length}/1000 characters
+                                    </p>
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                    <button
+                                        type="submit"
+                                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                                    >
+                                        Submit Review
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowReviewForm(false)}
+                                        className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        )}
 
                         {/* Reviews List */}
                         <div className="space-y-4">
