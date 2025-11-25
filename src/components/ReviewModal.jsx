@@ -29,6 +29,33 @@ const ReviewModal = ({ placeId, placeName, isOpen, onClose }) => {
         }
     };
 
+    const handleSubmitReview = async (e) => {
+        e.preventDefault();
+        
+        if (!newReview.rating) {
+            toast.error('Please provide a rating');
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            const response = await createPlaceReview(placeId, newReview);
+            const createdReview = response?.data ?? response;
+            
+            setReviews(prev => [createdReview, ...prev]);
+            setNewReview({ rating: 5, comment: '' });
+            toast.success('Review added successfully!');
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            const message = error?.response?.data?.message || 'Failed to submit review';
+            toast.error(message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
@@ -43,6 +70,59 @@ const ReviewModal = ({ placeId, placeName, isOpen, onClose }) => {
                     </button>
                 </div>
 
+                {/* Place name */}
+                <div className="px-4 py-2 bg-gray-50 border-b">
+                    <p className="text-sm font-medium text-gray-900">{placeName}</p>
+                </div>
+
+                {/* Review form */}
+                <div className="p-4 border-b bg-gray-50">
+                    <form onSubmit={handleSubmitReview} className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setNewReview({ ...newReview, rating: star })}
+                                    className="focus:outline-none"
+                                >
+                                    <Star
+                                        className={`w-6 h-6 ${
+                                            star <= newReview.rating
+                                                ? 'text-yellow-400 fill-yellow-400'
+                                                : 'text-gray-300'
+                                        } hover:text-yellow-400 transition-colors`}
+                                    />
+                                </button>
+                            ))}
+                            <span className="text-sm text-gray-600 ml-2">
+                                {newReview.rating} star{newReview.rating !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={newReview.comment}
+                                onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                                placeholder="Add a comment..."
+                                className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                maxLength="500"
+                            />
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="px-4 py-2 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {submitting ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <Send className="w-4 h-4" />
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </div>
 
                 {/* Reviews list */}
                 <div className="flex-1 overflow-y-auto">
