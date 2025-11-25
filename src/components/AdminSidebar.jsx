@@ -60,7 +60,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen
       navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
-      clearCookies(); // Clear cookies anyway
+      clearCookies(); // Clear cookies 
       toast.error("Logout failed, but session cleared");
       navigate("/login");
     }
