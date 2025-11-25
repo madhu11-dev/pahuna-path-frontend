@@ -364,3 +364,84 @@ const Feedpage = () => {
                                                         </div>
                                                     </>
                                                 )}
+                                            </>
+                                        ) : (
+                                            <div className="w-full h-80 bg-gray-200 flex items-center justify-center">
+                                                <span className="text-gray-500">No image available</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="lg:w-1/3 p-6 flex flex-col">
+                                        <p className="text-gray-700 leading-relaxed mb-4">{post.description}</p>
+
+                                        <div className="mt-auto space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center">
+                                                    {[...Array(5)].map((_, i) => {
+                                                        const filled = i < Math.round(post.averageRating ?? 0);
+                                                        return (
+                                                            <Star
+                                                                key={i}
+                                                                className={`w-4 h-4 ${filled ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
+                                                <span className="text-sm font-semibold text-gray-900">
+                                                    {post.averageRating.toFixed(1)}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                    ({post.reviewCount} review{post.reviewCount !== 1 ? 's' : ''})
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => setSelectedPlaceId(post.id)}
+                                                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                                                >
+                                                    Explore
+                                                </button>
+                                                <button 
+                                                    onClick={() => setSelectedPlaceForReview(post)}
+                                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                                >
+                                                    Reviews ({post.reviewCount})
+                                                </button>
+                                            </div>
+                                            <div className="flex gap-2 mt-2">
+                                                <a href={post.mapLink} target="_blank" rel="noopener noreferrer" className="flex-1">
+                                                    <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                                                        View on Maps
+                                                    </button>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                </main>
+            </div>
+            
+            {/* Place Detail Modal */}
+            <PlaceDetailModal 
+                placeId={selectedPlaceId}
+                isOpen={!!selectedPlaceId}
+                onClose={() => setSelectedPlaceId(null)}
+            />
+
+            {/* Review Modal */}
+            <ReviewModal 
+                placeId={selectedPlaceForReview?.id}
+                placeName={selectedPlaceForReview?.name}
+                isOpen={!!selectedPlaceForReview}
+                onClose={() => setSelectedPlaceForReview(null)}
+            />
+            
+            <ToastContainer />
+        </div>
+    );
+}
+
+export default Feedpage;
