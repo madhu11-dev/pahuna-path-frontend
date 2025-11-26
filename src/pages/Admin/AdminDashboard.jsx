@@ -7,7 +7,6 @@ import AdminSidebar from "../../components/AdminSidebar";
 import { 
   getDashboardStatsApi, 
   getAllUsersApi, 
-  getAllPlacesApi, 
   getAllHotelsApi 
 } from "../../apis/Api";
 
@@ -27,7 +26,6 @@ const AdminDashboard = () => {
     visitor_graph_data: []
   });
   const [users, setUsers] = useState([]);
-  const [places, setPlaces] = useState([]);
   const [hotels, setHotels] = useState([]);
 
   // Fetch dashboard data
@@ -59,18 +57,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch places data
-  const fetchPlaces = async () => {
-    try {
-      const response = await getAllPlacesApi();
-      if (response.status) {
-        setPlaces(response.places);
-      }
-    } catch (error) {
-      console.error("Error fetching places:", error);
-      toast.error("Failed to load places");
-    }
-  };
+
 
   // Fetch hotels data
   const fetchHotels = async () => {
@@ -92,8 +79,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (activeTab === "users") {
       fetchUsers();
-    } else if (activeTab === "places") {
-      fetchPlaces();
     } else if (activeTab === "hotels") {
       fetchHotels();
     }
@@ -197,43 +182,7 @@ const AdminDashboard = () => {
           </>
         )}
 
-        {/* Places */}
-        {activeTab === "places" && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900">Places Management</h1>
-            {places.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {places.map((place) => (
-                  <div key={place.id} className="bg-white shadow-lg rounded-xl overflow-hidden">
-                    {place.image_url && (
-                      <img src={place.image_url} alt={place.name} className="w-full h-40 object-cover" />
-                    )}
-                    <div className="p-4">
-                      <p className="font-bold text-lg text-gray-900">{place.name}</p>
-                      <p className="text-gray-600 text-sm mb-2">{place.description}</p>
-                      <p className="text-sm text-gray-500 mt-1">Reviews: {place.review_count}</p>
-                      <div className="text-yellow-400 mt-1 flex gap-1 items-center">
-                        <span className="text-sm text-gray-600">Rating:</span>
-                        {Array.from({ length: Math.round(place.average_rating) }).map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
-                        ))}
-                        <span className="text-sm text-gray-600 ml-1">({place.average_rating})</span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Added: {new Date(place.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="bg-white p-8 rounded-xl shadow-lg text-center">
-                <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No places available</p>
-              </div>
-            )}
-          </div>
-        )}
+
 
         {/* Hotels */}
         {activeTab === "hotels" && (
