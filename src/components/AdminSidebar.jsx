@@ -20,6 +20,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen
   // Determine active tab from current route
   const getCurrentActiveTab = () => {
     if (location.pathname.includes('/admin/places')) return 'places';
+    if (location.pathname.includes('/admin/users')) return 'users';
     if (location.pathname.includes('/admin/dashboard') || location.pathname === '/admin') return 'dashboard';
     return activeTab;
   };
@@ -81,6 +82,8 @@ const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen
       navigate("/admin/dashboard");
     } else if (key === "places") {
       navigate("/admin/places");
+    } else if (key === "users") {
+      navigate("/admin/users");
     } else {
       // For other tabs that still use the dashboard component
       setActiveTab(key);
