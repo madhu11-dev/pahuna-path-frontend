@@ -97,6 +97,8 @@ export const getDashboardStatsApi = () => get("/api/admin/dashboard/stats");
 export const getAllUsersApi = () => get("/api/admin/users");
 export const getAllPlacesApi = () => get("/api/admin/places");
 export const getAllHotelsApi = () => get("/api/admin/hotels");
+export const deletePlaceApi = (placeId) => del(`/api/admin/places/${placeId}`);
+export const mergePlacesApi = (data) => post("/api/admin/places/merge", data);
 
 // Legacy support (keeping old names for compatibility)
 export const newlocation = (data) => createPlace(data);
