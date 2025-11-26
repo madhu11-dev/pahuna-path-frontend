@@ -3,15 +3,11 @@ import {
   MapPin, 
   Star, 
   ExternalLink, 
-  Trash2, 
-  User, 
+  Trash2,  
   Calendar,
   Merge,
-  Eye,
   X,
-  Check,
-  ChevronLeft,
-  ChevronRight
+  Check
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
