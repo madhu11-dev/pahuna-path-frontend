@@ -6,7 +6,6 @@ import "react-toastify/dist/ReactToastify.css";
 import AdminSidebar from "../../components/AdminSidebar";
 import { 
   getDashboardStatsApi, 
-  getAllUsersApi, 
   getAllHotelsApi 
 } from "../../apis/Api";
 
@@ -25,7 +24,6 @@ const AdminDashboard = () => {
     },
     visitor_graph_data: []
   });
-  const [users, setUsers] = useState([]);
   const [hotels, setHotels] = useState([]);
 
   // Fetch dashboard data
@@ -44,18 +42,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch users data
-  const fetchUsers = async () => {
-    try {
-      const response = await getAllUsersApi();
-      if (response.status) {
-        setUsers(response.users);
-      }
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      toast.error("Failed to load users");
-    }
-  };
+
 
 
 
@@ -77,9 +64,7 @@ const AdminDashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "users") {
-      fetchUsers();
-    } else if (activeTab === "hotels") {
+    if (activeTab === "hotels") {
       fetchHotels();
     }
   }, [activeTab]);
@@ -214,62 +199,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Users */}
-        {activeTab === "users" && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
-            {users.length > 0 ? (
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          User
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Email
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Joined
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {users.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <img 
-                                className="h-10 w-10 rounded-full" 
-                                src={user.profile_picture_url} 
-                                alt={user.name} 
-                              />
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {user.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(user.created_at).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white p-8 rounded-xl shadow-lg text-center">
-                <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No users available</p>
-              </div>
-            )}
-          </div>
-        )}
+
 
         {/* Staff */}
         {activeTab === "staff" && (
