@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminPlaces from "./pages/Admin/AdminPlaces";
 import Loginpage from "./pages/auth/Loginpage";
 import Registerpage from "./pages/auth/Registerpage";
 
@@ -26,6 +27,7 @@ const App = () => {
         {/* Admin routes */}
         <Route element={<AdminRoutes />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/places" element={<AdminPlaces />} />
           <Route path="/admin" element={<AdminDashboard />} />
         </Route>
 
