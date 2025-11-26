@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
   MapPin, 
@@ -15,6 +15,16 @@ import { adminLogoutApi } from "../apis/Api";
 
 const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine active tab from current route
+  const getCurrentActiveTab = () => {
+    if (location.pathname.includes('/admin/places')) return 'places';
+    if (location.pathname.includes('/admin/dashboard') || location.pathname === '/admin') return 'dashboard';
+    return activeTab;
+  };
+
+  const currentActiveTab = getCurrentActiveTab();
 
   const menuItems = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -67,7 +77,15 @@ const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen
   };
 
   const handleMenuClick = (key) => {
-    setActiveTab(key);
+    if (key === "dashboard") {
+      navigate("/admin/dashboard");
+    } else if (key === "places") {
+      navigate("/admin/places");
+    } else {
+      // For other tabs that still use the dashboard component
+      setActiveTab(key);
+      navigate("/admin/dashboard");
+    }
     setIsSidebarOpen(false);
   };
 
@@ -97,7 +115,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen
                 key={item.key}
                 onClick={() => handleMenuClick(item.key)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all duration-200 ${
-                  activeTab === item.key
+                  currentActiveTab === item.key
                     ? "bg-emerald-700 text-white font-semibold shadow-inner"
                     : "hover:bg-emerald-700/60 text-emerald-100 hover:text-white"
                 }`}
