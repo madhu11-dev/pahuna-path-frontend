@@ -11,7 +11,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import { createPlace, getPlaces } from "../../apis/Api";
 import PlaceDetailModal from "../../components/PlaceDetailModal";
-import ReviewModal from "../../components/ReviewModal";
 import UserNavbar from "../../components/user/UserNavbar";
 import UserSidebar from "../../components/user/UserSidebar";
 import { IMAGE_PLACEHOLDER, resolveImageUrl } from "../../utils/media";
@@ -57,7 +56,6 @@ const Feedpage = () => {
   const [error, setError] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState({});
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
-  const [selectedPlaceForReview, setSelectedPlaceForReview] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newPost, setNewPost] = useState({
@@ -482,28 +480,20 @@ const Feedpage = () => {
                           {post.reviewCount !== 1 ? "s" : ""})
                         </span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="space-y-2">
                         <button
                           onClick={() => setSelectedPlaceId(post.id)}
-                          className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                          className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
                         >
                           Explore
                         </button>
-                        <button
-                          onClick={() => setSelectedPlaceForReview(post)}
-                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                        >
-                          Reviews ({post.reviewCount})
-                        </button>
-                      </div>
-                      <div className="flex gap-2 mt-2">
                         <a
                           href={post.mapLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1"
+                          className="block w-full"
                         >
-                          <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                          <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                             View on Maps
                           </button>
                         </a>
@@ -522,14 +512,6 @@ const Feedpage = () => {
         placeId={selectedPlaceId}
         isOpen={!!selectedPlaceId}
         onClose={() => setSelectedPlaceId(null)}
-      />
-
-      {/* Review Modal */}
-      <ReviewModal
-        placeId={selectedPlaceForReview?.id}
-        placeName={selectedPlaceForReview?.name}
-        isOpen={!!selectedPlaceForReview}
-        onClose={() => setSelectedPlaceForReview(null)}
       />
 
       <ToastContainer />
