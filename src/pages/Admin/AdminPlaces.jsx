@@ -494,7 +494,7 @@ const AdminPlaces = () => {
                               <div className="flex items-start space-x-3">
                                 {place.images && place.images[0] && (
                                   <img
-                                    src={`http://localhost:8090/storage/${place.images[0]}`}
+                                    src={`${place.images[0]}`}
                                     alt={place.place_name}
                                     className="w-16 h-16 rounded object-cover flex-shrink-0"
                                   />
@@ -732,7 +732,7 @@ const AdminPlaces = () => {
                                 }}
                               >
                                 <img
-                                  src={`http://localhost:8090/storage/${image}`}
+                                  src={`${image}`}
                                   alt={`${place.place_name} image`}
                                   className="w-full h-20 object-cover"
                                 />
