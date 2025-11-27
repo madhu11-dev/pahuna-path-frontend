@@ -113,6 +113,13 @@ export const getAllHotelsApi = () => get("/api/admin/hotels");
 export const deletePlaceApi = (placeId) => del(`/api/admin/places/${placeId}`);
 export const deleteUserApi = (userId) => del(`/api/admin/users/${userId}`);
 export const mergePlacesApi = (data) => post("/api/admin/places/merge", data);
+export const verifyPlaceApi = (placeId) => {
+  return axiosApi({ 
+    endpoint: `/api/admin/places/${placeId}/verify`, 
+    method: "PATCH", 
+    isAdmin: false 
+  });
+};
 
 // Get place images for landing page
 export const getPlaceImagesApi = () => get("/api/places/images");
