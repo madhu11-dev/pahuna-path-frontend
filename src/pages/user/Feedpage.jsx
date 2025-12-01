@@ -10,8 +10,9 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import { createPlace, getPlaces } from "../../apis/Api";
+import FilterBar from "../../components/FilterBar";
 import PlaceDetailModal from "../../components/PlaceDetailModal";
-import ReviewModal from "../../components/ReviewModal";
+import SearchBar from "../../components/SearchBar";
 import UserNavbar from "../../components/user/UserNavbar";
 import UserSidebar from "../../components/user/UserSidebar";
 import { IMAGE_PLACEHOLDER, resolveImageUrl } from "../../utils/media";
@@ -53,12 +54,15 @@ const normalizePlace = (place) => {
 
 const Feedpage = () => {
   const [posts, setPosts] = useState([]);
+  const [filteredPosts, setFilteredPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState({});
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
-  const [selectedPlaceForReview, setSelectedPlaceForReview] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newPost, setNewPost] = useState({
     place_name: "",
@@ -77,6 +81,7 @@ const Feedpage = () => {
       const response = await getPlaces();
       const fetched = (response?.data || []).map(normalizePlace);
       setPosts(fetched);
+      applyFiltersAndSort(fetched, searchTerm, sortBy, sortOrder);
     } catch (err) {
       console.error("Failed to fetch places:", err);
       setError("Unable to load places. Please try again later.");
@@ -90,6 +95,53 @@ const Feedpage = () => {
   useEffect(() => {
     fetchPlaces();
   }, [fetchPlaces]);
+
+  const applyFiltersAndSort = useCallback((postsToFilter, search, sortField, order) => {
+    let filtered = [...postsToFilter];
+
+    if (search) {
+      filtered = filtered.filter(post =>
+        post.name.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    filtered.sort((a, b) => {
+      let compareResult = 0;
+      
+      switch (sortField) {
+        case "name":
+          compareResult = a.name.localeCompare(b.name);
+          break;
+        case "rating":
+          compareResult = (a.averageRating || 0) - (b.averageRating || 0);
+          break;
+        case "newest":
+          compareResult = new Date(b.createdAt) - new Date(a.createdAt);
+          break;
+        default:
+          return 0;
+      }
+      
+      return order === "asc" ? compareResult : -compareResult;
+    });
+
+    setFilteredPosts(filtered);
+  }, []);
+
+  const handleSearch = useCallback((search) => {
+    setSearchTerm(search);
+    applyFiltersAndSort(posts, search, sortBy, sortOrder);
+  }, [posts, sortBy, sortOrder, applyFiltersAndSort]);
+
+  const handleSort = useCallback((field, order) => {
+    setSortBy(field);
+    setSortOrder(order);
+    applyFiltersAndSort(posts, searchTerm, field, order);
+  }, [posts, searchTerm, applyFiltersAndSort]);
+
+  useEffect(() => {
+    applyFiltersAndSort(posts, searchTerm, sortBy, sortOrder);
+  }, [posts, searchTerm, sortBy, sortOrder, applyFiltersAndSort]);
 
   // Cleanup object URLs when imageFiles change
   useEffect(() => {
@@ -180,23 +232,32 @@ const Feedpage = () => {
         <UserSidebar active="places" />
 
         <main className="ml-64 flex-1 px-8 py-6 max-w-4xl mx-auto">
-          {/* Add place button */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800">
-                Share a new place
-              </h3>
-              <p className="text-sm text-gray-500">
-                Help other travelers discover your favorite spot.
-              </p>
+          {/* Header with Add Place, Search, and Filter */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+              <button
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium whitespace-nowrap"
+              >
+                <User className="w-4 h-4" />
+                <span>Add Place</span>
+              </button>
+              <div className="flex-1">
+                <SearchBar
+                  onSearch={handleSearch}
+                  placeholder="Search places by name..."
+                  className="w-full"
+                />
+              </div>
+              <div className="w-full lg:w-auto">
+                <FilterBar
+                  onSort={handleSort}
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  className="w-full lg:w-40"
+                />
+              </div>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
-            >
-              <User className="w-5 h-5" />
-              <span>Add Place</span>
-            </button>
           </div>
 
           {/* Add place modal */}
@@ -358,9 +419,14 @@ const Feedpage = () => {
                 No places have been shared yet. Be the first!
               </div>
             )}
+            {!loading && posts.length > 0 && filteredPosts.length === 0 && (
+              <div className="p-8 bg-white border border-dashed border-gray-300 rounded-xl text-center text-gray-500">
+                No places found matching your search criteria.
+              </div>
+            )}
 
             {/* show list of posts */}
-            {posts.map((post) => (
+            {filteredPosts.map((post) => (
               <article
                 key={post.id}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
@@ -482,28 +548,20 @@ const Feedpage = () => {
                           {post.reviewCount !== 1 ? "s" : ""})
                         </span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="space-y-2">
                         <button
                           onClick={() => setSelectedPlaceId(post.id)}
-                          className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                          className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
                         >
                           Explore
                         </button>
-                        <button
-                          onClick={() => setSelectedPlaceForReview(post)}
-                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                        >
-                          Reviews ({post.reviewCount})
-                        </button>
-                      </div>
-                      <div className="flex gap-2 mt-2">
                         <a
                           href={post.mapLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1"
+                          className="block w-full"
                         >
-                          <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                          <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                             View on Maps
                           </button>
                         </a>
@@ -522,14 +580,6 @@ const Feedpage = () => {
         placeId={selectedPlaceId}
         isOpen={!!selectedPlaceId}
         onClose={() => setSelectedPlaceId(null)}
-      />
-
-      {/* Review Modal */}
-      <ReviewModal
-        placeId={selectedPlaceForReview?.id}
-        placeName={selectedPlaceForReview?.name}
-        isOpen={!!selectedPlaceForReview}
-        onClose={() => setSelectedPlaceForReview(null)}
       />
 
       <ToastContainer />
