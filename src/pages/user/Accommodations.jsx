@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Star, User, UtensilsCrossed } from 'lucide-react';
 import { newAccommodation, getAccommodations } from "../../apis/Api";
+import FilterBar from "../../components/FilterBar";
+import SearchBar from "../../components/SearchBar";
 import { ToastContainer, toast } from "react-toastify";
 import UserSidebar from '../../components/user/UserSidebar';
 import UserNavbar from '../../components/user/UserNavbar';
@@ -28,8 +30,12 @@ const normalizeAccommodation = (accommodation) => {
 
 const Accommodations = () => {
     const [accommodations, setAccommodations] = useState([]);
+    const [filteredAccommodations, setFilteredAccommodations] = useState([]);
     const [accommodationsLoading, setAccommodationsLoading] = useState(true);
     const [accommodationsError, setAccommodationsError] = useState(null);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortBy, setSortBy] = useState("newest");
+    const [sortOrder, setSortOrder] = useState("desc");
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -55,6 +61,7 @@ const Accommodations = () => {
                 );
 
                 setAccommodations(normalized);
+                applyFiltersAndSort(normalized, searchTerm, sortBy, sortOrder);
                 setAccommodationsError(null);
             } catch (err) {
                 console.error("Failed to fetch accommodations:", err);
@@ -67,6 +74,53 @@ const Accommodations = () => {
 
         loadData();
     }, []);
+
+    const applyFiltersAndSort = (accommodationsToFilter, search, sortField, order) => {
+        let filtered = [...accommodationsToFilter];
+
+        if (search) {
+            filtered = filtered.filter(accommodation =>
+                accommodation.name.toLowerCase().includes(search.toLowerCase())
+            );
+        }
+
+        filtered.sort((a, b) => {
+            let compareResult = 0;
+            
+            switch (sortField) {
+                case "name":
+                    compareResult = a.name.localeCompare(b.name);
+                    break;
+                case "rating":
+                    compareResult = (a.review || 0) - (b.review || 0);
+                    break;
+                case "newest":
+                    compareResult = b.id - a.id;
+                    break;
+                default:
+                    return 0;
+            }
+            
+            return order === "asc" ? compareResult : -compareResult;
+        });
+
+        setFilteredAccommodations(filtered);
+    };
+
+    const handleSearch = (search) => {
+        setSearchTerm(search);
+        applyFiltersAndSort(accommodations, search, sortBy, sortOrder);
+    };
+
+    const handleSort = (field, order) => {
+        setSortBy(field);
+        setSortOrder(order);
+        applyFiltersAndSort(accommodations, searchTerm, field, order);
+    };
+
+    useEffect(() => {
+        applyFiltersAndSort(accommodations, searchTerm, sortBy, sortOrder);
+    }, [accommodations, searchTerm, sortBy, sortOrder]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -142,19 +196,32 @@ const Accommodations = () => {
                         <p className="text-gray-600">Add restaurants and hotels to places</p>
                     </div>
 
-                    {/* Add new accommodation button */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-800">Share a new accommodation</h3>
-                            <p className="text-sm text-gray-500">Restaurants and hotels help travelers plan better.</p>
+                    {/* Header with Add Accommodation, Search, and Filter */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+                        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium whitespace-nowrap"
+                            >
+                                <UtensilsCrossed className="w-4 h-4" />
+                                <span>Add Accommodation</span>
+                            </button>
+                            <div className="flex-1">
+                                <SearchBar
+                                    onSearch={handleSearch}
+                                    placeholder="Search accommodations by name..."
+                                    className="w-full"
+                                />
+                            </div>
+                            <div className="w-full lg:w-auto">
+                                <FilterBar
+                                    onSort={handleSort}
+                                    sortBy={sortBy}
+                                    sortOrder={sortOrder}
+                                    className="w-full lg:w-40"
+                                />
+                            </div>
                         </div>
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
-                        >
-                            <UtensilsCrossed className="w-5 h-5" />
-                            <span>Add Accommodation</span>
-                        </button>
                     </div>
 
                     {/* Modal for adding new accommodation */}
@@ -310,8 +377,13 @@ const Accommodations = () => {
                                 No accommodations shared yet. Be the first to add one!
                             </div>
                         )}
+                        {!accommodationsLoading && accommodations.length > 0 && filteredAccommodations.length === 0 && (
+                            <div className="p-8 bg-white border border-dashed border-gray-300 rounded-xl text-center text-gray-500">
+                                No accommodations found matching your search criteria.
+                            </div>
+                        )}
 
-                        {accommodations.map((item) => (
+                        {filteredAccommodations.map((item) => (
                             <article key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                                 <div className="p-4 flex items-center gap-3">
                                     <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
