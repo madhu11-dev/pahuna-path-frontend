@@ -63,20 +63,27 @@ const RegisterPage = () => {
     const file = e.target.files[0];
     if (file) {
       // Validate file type and size
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "image/gif",
+      ];
       const maxSize = 2048 * 1024; // 2MB
 
       if (!allowedTypes.includes(file.type)) {
-        setProfilePictureError('Please select a valid image file (JPEG, PNG, JPG, GIF)');
+        setProfilePictureError(
+          "Please select a valid image file (JPEG, PNG, JPG, GIF)"
+        );
         return;
       }
 
       if (file.size > maxSize) {
-        setProfilePictureError('Profile picture must be less than 2MB');
+        setProfilePictureError("Profile picture must be less than 2MB");
         return;
       }
 
-      setProfilePictureError('');
+      setProfilePictureError("");
       setProfilePicture(file);
 
       // Create preview
@@ -91,10 +98,10 @@ const RegisterPage = () => {
   const removeProfilePicture = () => {
     setProfilePicture(null);
     setProfilePicturePreview(null);
-    setProfilePictureError('');
+    setProfilePictureError("");
     // Clear the input
-    const fileInput = document.getElementById('profile-picture');
-    if (fileInput) fileInput.value = '';
+    const fileInput = document.getElementById("profile-picture");
+    if (fileInput) fileInput.value = "";
   };
 
   var validate = () => {
@@ -141,12 +148,12 @@ const RegisterPage = () => {
 
     // Create FormData for file upload
     const formData = new FormData();
-    formData.append('name', name);
-    formData.append('email', email);
-    formData.append('password', password);
+    formData.append("name", name);
+    formData.append("email", email);
+    formData.append("password", password);
 
     if (profilePicture) {
-      formData.append('profile_picture', profilePicture);
+      formData.append("profile_picture", profilePicture);
     }
 
     try {
@@ -198,8 +205,16 @@ const RegisterPage = () => {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          <svg
+                            className="w-8 h-8 text-gray-400"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                         </div>
                       )}
@@ -237,7 +252,9 @@ const RegisterPage = () => {
                   </div>
                 </div>
                 {profilePictureError && (
-                  <p className="text-red-500 text-sm mt-1">{profilePictureError}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {profilePictureError}
+                  </p>
                 )}
               </div>
 
@@ -263,8 +280,6 @@ const RegisterPage = () => {
                 </label>
                 {nameError && <p className="text-danger">{nameError}</p>}
               </div>
-
-
 
               {/* Email */}
               <div className="relative">
@@ -347,6 +362,20 @@ const RegisterPage = () => {
                 </button>
               </div>
             </form>
+
+            {/* Hotel Staff Registration Option */}
+            <div className="text-center mt-6 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+              <p className="text-emerald-800 text-sm mb-2">
+                Are you representing a hotel or accommodation?
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate("/hotel-staff-register")}
+                className="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline"
+              >
+                Register as Hotel Staff
+              </button>
+            </div>
 
             {/* Redirect */}
             <p className="text-center text-gray-600 mt-6">
