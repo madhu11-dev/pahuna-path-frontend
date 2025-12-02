@@ -1,17 +1,21 @@
 import { Route, Routes } from "react-router-dom";
+import AdminAccommodations from "./pages/Admin/AdminAccommodations";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminPlaces from "./pages/Admin/AdminPlaces";
 import AdminUsers from "./pages/Admin/AdminUsers";
+import HotelStaffRegister from "./pages/auth/HotelStaffRegister";
 import Loginpage from "./pages/auth/Loginpage";
 import Registerpage from "./pages/auth/Registerpage";
+import StaffDashboard from "./pages/Staff/StaffDashboard";
+import StaffRoutes from "./protected_routes/StaffRoutes";
 
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 
 import Landing from "./pages/Landing";
-import Feedpage from "./pages/user/Feedpage";
 import Accommodations from "./pages/user/Accommodations";
 import Explore from "./pages/user/Explore";
+import Feedpage from "./pages/user/Feedpage";
 import AdminRoutes from "./protected_routes/AdminRoutes";
 import UserRoutes from "./protected_routes/UserRoutes";
 
@@ -22,14 +26,19 @@ const App = () => {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Loginpage />} />
         <Route path="/register" element={<Registerpage />} />
+        <Route path="/hotel-staff-register" element={<HotelStaffRegister />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        
+
         {/* Admin routes */}
         <Route element={<AdminRoutes />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/places" element={<AdminPlaces />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route
+            path="/admin/accommodations"
+            element={<AdminAccommodations />}
+          />
           <Route path="/admin" element={<AdminDashboard />} />
         </Route>
 
@@ -38,6 +47,11 @@ const App = () => {
           <Route path="/feed" element={<Feedpage />} />
           <Route path="/accommodations" element={<Accommodations />} />
           <Route path="/explore" element={<Explore />} />
+        </Route>
+
+        {/* Staff routes */}
+        <Route element={<StaffRoutes />}>
+          <Route path="/staff/dashboard" element={<StaffDashboard />} />
         </Route>
       </Routes>
     </>
