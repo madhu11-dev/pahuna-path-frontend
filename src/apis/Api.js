@@ -103,6 +103,12 @@ export const deletePlaceReview = (placeId, reviewId) =>
 export const newAccommodation = (data) => post("/api/accommodations", data);
 export const getAccommodations = () => get("/api/accommodations");
 
+// Hotel Staff APIs
+export const registerStaffApi = (data) => post("/api/auth/staff/register", data);
+export const getStaffStatusApi = () => get("/api/auth/staff/status");
+export const getStaffDashboardDataApi = () => get("/api/staff/dashboard");
+export const updateStaffProfileApi = (data) => post("/api/staff/profile/update", data);
+
 // Admin APIs - using regular auth tokens
 export const adminLogoutApi = () => post("/api/admin/logout", {});
 export const getAdminInfoApi = () => get("/api/admin/me");
@@ -120,6 +126,15 @@ export const verifyPlaceApi = (placeId) => {
     isAdmin: false 
   });
 };
+export const getPendingAccommodationsApi = () => get("/api/admin/accommodations/pending");
+export const approveAccommodationApi = (accommodationId) => {
+  return axiosApi({ 
+    endpoint: `/api/admin/accommodations/${accommodationId}/approve`, 
+    method: "PATCH", 
+    isAdmin: false 
+  });
+};
+export const rejectAccommodationApi = (accommodationId) => del(`/api/admin/accommodations/${accommodationId}/reject`);
 
 // Get place images for landing page
 export const getPlaceImagesApi = () => get("/api/places/images");
