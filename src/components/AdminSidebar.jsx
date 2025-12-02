@@ -21,6 +21,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen
   const getCurrentActiveTab = () => {
     if (location.pathname.includes('/admin/places')) return 'places';
     if (location.pathname.includes('/admin/users')) return 'users';
+    if (location.pathname.includes('/admin/accommodations')) return 'accommodations';
     if (location.pathname.includes('/admin/dashboard') || location.pathname === '/admin') return 'dashboard';
     return activeTab;
   };
@@ -31,7 +32,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { key: "places", label: "Places", icon: MapPin },
     { key: "hotels", label: "Hotels", icon: Building2 },
-    { key: "staff", label: "Staff", icon: UserCheck },
+    { key: "accommodations", label: "Staff", icon: UserCheck },
     { key: "users", label: "Users", icon: Users },
     { key: "settings", label: "Settings", icon: Settings },
   ];
@@ -84,6 +85,8 @@ const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen
       navigate("/admin/places");
     } else if (key === "users") {
       navigate("/admin/users");
+    } else if (key === "accommodations") {
+      navigate("/admin/accommodations");
     } else {
       // For other tabs that still use the dashboard component
       setActiveTab(key);
