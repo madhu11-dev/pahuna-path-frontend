@@ -92,11 +92,12 @@ const LoginPage = () => {
         document.cookie = `user_name=${res.user["name"]}; path=/; max-age=${
           24 * 60 * 60
         }`;
-        document.cookie = `user_profile_picture=${res.user["profile_picture_url"] || 'http://localhost:8090/images/default-profile.png'}; path=/; max-age=${
-          24 * 60 * 60
-        }`;
+        document.cookie = `user_profile_picture=${
+          res.user["profile_picture_url"] ||
+          "http://localhost:8090/images/default-profile.png"
+        }; path=/; max-age=${24 * 60 * 60}`;
         localStorage.setItem("utype", res.user["utype"]);
-        
+
         // Set admin-specific cookies if user is admin
         if (res.user["utype"] === "ADM") {
           document.cookie = `admin_token=${res.token}; path=/; max-age=${
@@ -110,14 +111,18 @@ const LoginPage = () => {
           }`;
           localStorage.setItem("admin_type", "ADMIN");
         }
-        
+
         toast.success(res.message);
-        
+
         // Redirect based on user type
         if (res.user["utype"] === "ADM") {
           navigate("/admin/dashboard"); // Redirect admin to dashboard
-        } else {
+        } else if (res.user["utype"] === "STF") {
+          navigate("/staff/dashboard"); // Redirect staff to dashboard
+        } else if (res.user["utype"] === "USR") {
           navigate("/feed"); // Redirect user to feed
+        } else {
+          navigate("/");
         }
       }
     } catch (err) {
