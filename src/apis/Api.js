@@ -103,11 +103,23 @@ export const deletePlaceReview = (placeId, reviewId) =>
 export const newAccommodation = (data) => post("/api/accommodations", data);
 export const getAccommodations = () => get("/api/accommodations");
 
-// Hotel Staff APIs
-export const registerStaffApi = (data) => post("/api/auth/staff/register", data);
+// Staff APIs
+export const registerStaffApi = (data) =>
+  post("/api/auth/staff/register", data);
+export const logoutStaffApi = () => post("/api/staff/logout", {});
 export const getStaffStatusApi = () => get("/api/auth/staff/status");
 export const getStaffDashboardDataApi = () => get("/api/staff/dashboard");
-export const updateStaffProfileApi = (data) => post("/api/staff/profile/update", data);
+export const updateStaffProfileApi = (data) =>
+  post("/api/staff/profile/update", data);
+export const updateAccommodationApi = (id, data) => {
+  return axiosApi({
+    endpoint: `/api/accommodations/${id}`,
+    method: "PUT",
+    data: data,
+    isAdmin: false,
+  });
+};
+export const deleteAccommodationApi = (id) => del(`/api/accommodations/${id}`);
 
 // Admin APIs - using regular auth tokens
 export const adminLogoutApi = () => post("/api/admin/logout", {});
@@ -115,29 +127,45 @@ export const getAdminInfoApi = () => get("/api/admin/me");
 export const getDashboardStatsApi = () => get("/api/admin/dashboard/stats");
 export const getAllUsersApi = () => get("/api/admin/users");
 export const getAllPlacesApi = () => get("/api/admin/places");
-export const getAllHotelsApi = () => get("/api/admin/hotels");
+
 export const deletePlaceApi = (placeId) => del(`/api/admin/places/${placeId}`);
 export const deleteUserApi = (userId) => del(`/api/admin/users/${userId}`);
 export const mergePlacesApi = (data) => post("/api/admin/places/merge", data);
 export const verifyPlaceApi = (placeId) => {
-  return axiosApi({ 
-    endpoint: `/api/admin/places/${placeId}/verify`, 
-    method: "PATCH", 
-    isAdmin: false 
+  return axiosApi({
+    endpoint: `/api/admin/places/${placeId}/verify`,
+    method: "PATCH",
+    isAdmin: false,
   });
 };
-export const getPendingAccommodationsApi = () => get("/api/admin/accommodations/pending");
+export const getPendingAccommodationsApi = () =>
+  get("/api/admin/accommodations/pending");
 export const approveAccommodationApi = (accommodationId) => {
-  return axiosApi({ 
-    endpoint: `/api/admin/accommodations/${accommodationId}/approve`, 
-    method: "PATCH", 
-    isAdmin: false 
+  return axiosApi({
+    endpoint: `/api/admin/accommodations/${accommodationId}/approve`,
+    method: "PATCH",
+    isAdmin: false,
   });
 };
-export const rejectAccommodationApi = (accommodationId) => del(`/api/admin/accommodations/${accommodationId}/reject`);
+export const rejectAccommodationApi = (accommodationId) =>
+  del(`/api/admin/accommodations/${accommodationId}/reject`);
+
+// Staff Management APIs
+export const getAllStaffApi = () => get("/api/admin/staff");
+export const getAllAccommodationsApi = () => get("/api/admin/accommodations");
+export const verifyAccommodationApi = (accommodationId) => {
+  return axiosApi({
+    endpoint: `/api/admin/accommodations/${accommodationId}/verify`,
+    method: "PATCH",
+    isAdmin: false,
+  });
+};
 
 // Get place images for landing page
 export const getPlaceImagesApi = () => get("/api/places/images");
 
 // Legacy support (keeping old names for compatibility)
 export const newlocation = (data) => createPlace(data);
+
+// Export utility functions
+export { getCookie };
