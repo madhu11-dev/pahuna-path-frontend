@@ -1,19 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { 
-  Users, 
-  Trash2, 
-  Mail, 
-  Calendar, 
-  UserCheck,
-  Search,
+import {
+  Calendar,
+  Eye,
   Filter,
-  MoreVertical,
-  Eye
+  Mail,
+  Search,
+  Trash2,
+  UserCheck,
+  Users,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { deleteUserApi, getAllUsersApi } from "../../apis/Api";
 import AdminSidebar from "../../components/AdminSidebar";
-import { getAllUsersApi, deleteUserApi } from "../../apis/Api";
 
 const AdminUsers = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -46,7 +45,11 @@ const AdminUsers = () => {
 
   // Delete user
   const handleDeleteUser = async (userId, userName) => {
-    if (window.confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone and will also remove all their places and reviews.`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to delete user "${userName}"? This action cannot be undone and will also remove all their places and reviews.`
+      )
+    ) {
       try {
         const response = await deleteUserApi(userId);
         if (response.status) {
@@ -69,12 +72,18 @@ const AdminUsers = () => {
       return;
     }
 
-    const userNames = selectedUsers.map(id => {
-      const user = users.find(u => u.id === id);
-      return user ? user.name : 'Unknown';
-    }).join(', ');
+    const userNames = selectedUsers
+      .map((id) => {
+        const user = users.find((u) => u.id === id);
+        return user ? user.name : "Unknown";
+      })
+      .join(", ");
 
-    if (window.confirm(`Are you sure you want to delete ${selectedUsers.length} users (${userNames})? This action cannot be undone.`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to delete ${selectedUsers.length} users (${userNames})? This action cannot be undone.`
+      )
+    ) {
       try {
         // Delete users one by one (you might want to create a bulk delete API endpoint)
         for (const userId of selectedUsers) {
@@ -93,7 +102,7 @@ const AdminUsers = () => {
   // Handle user selection
   const handleUserSelection = (userId) => {
     if (selectedUsers.includes(userId)) {
-      setSelectedUsers(selectedUsers.filter(id => id !== userId));
+      setSelectedUsers(selectedUsers.filter((id) => id !== userId));
     } else {
       setSelectedUsers([...selectedUsers, userId]);
     }
@@ -104,28 +113,29 @@ const AdminUsers = () => {
     if (selectedUsers.length === filteredUsers.length) {
       setSelectedUsers([]);
     } else {
-      setSelectedUsers(filteredUsers.map(user => user.id));
+      setSelectedUsers(filteredUsers.map((user) => user.id));
     }
   };
 
   // Search and filter users
   useEffect(() => {
-    let filtered = users.filter(user =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    let filtered = users.filter(
+      (user) =>
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Sort users
     filtered.sort((a, b) => {
       let aValue = a[sortBy];
       let bValue = b[sortBy];
-      
-      if (sortBy === 'created_at') {
+
+      if (sortBy === "created_at") {
         aValue = new Date(aValue);
         bValue = new Date(bValue);
       }
-      
-      if (sortOrder === 'asc') {
+
+      if (sortOrder === "asc") {
         return aValue > bValue ? 1 : -1;
       } else {
         return aValue < bValue ? 1 : -1;
@@ -142,11 +152,11 @@ const AdminUsers = () => {
   if (loading) {
     return (
       <div className="flex h-screen bg-gray-100">
-        <AdminSidebar 
-          activeTab="users" 
-          setActiveTab={() => {}} 
-          isSidebarOpen={isSidebarOpen} 
-          setIsSidebarOpen={setIsSidebarOpen} 
+        <AdminSidebar
+          activeTab="users"
+          setActiveTab={() => {}}
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
         />
         <main className="flex-1 p-8">
           <div className="flex items-center justify-center h-64">
@@ -159,21 +169,25 @@ const AdminUsers = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <AdminSidebar 
-        activeTab="users" 
-        setActiveTab={() => {}} 
-        isSidebarOpen={isSidebarOpen} 
-        setIsSidebarOpen={setIsSidebarOpen} 
+      <AdminSidebar
+        activeTab="users"
+        setActiveTab={() => {}}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
       />
 
       <main className="flex-1 p-8 overflow-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Users Management</h1>
-            <p className="text-gray-600 mt-1">Manage all registered users and their accounts</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Users Management
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage all registered users and their accounts
+            </p>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             {selectedUsers.length > 0 && (
               <button
@@ -204,7 +218,7 @@ const AdminUsers = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            
+
             {/* Sort By */}
             <div className="flex items-center space-x-2">
               <Filter className="text-gray-400 w-4 h-4" />
@@ -218,10 +232,12 @@ const AdminUsers = () => {
                 <option value="email">Email</option>
               </select>
               <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                onClick={() =>
+                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                {sortOrder === 'asc' ? '↑' : '↓'}
+                {sortOrder === "asc" ? "↑" : "↓"}
               </button>
             </div>
           </div>
@@ -237,7 +253,10 @@ const AdminUsers = () => {
                     <th className="px-6 py-3 text-left">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                        checked={
+                          selectedUsers.length === filteredUsers.length &&
+                          filteredUsers.length > 0
+                        }
                         onChange={handleSelectAll}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
@@ -261,10 +280,10 @@ const AdminUsers = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredUsers.map((user) => (
-                    <tr 
-                      key={user.id} 
+                    <tr
+                      key={user.id}
                       className={`hover:bg-gray-50 transition-colors ${
-                        selectedUsers.includes(user.id) ? 'bg-blue-50' : ''
+                        selectedUsers.includes(user.id) ? "bg-blue-50" : ""
                       }`}
                     >
                       <td className="px-6 py-4">
@@ -278,12 +297,16 @@ const AdminUsers = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <img 
+                            <img
                               className="h-10 w-10 rounded-full object-cover"
-                              src={user.profile_picture_url || 'http://localhost:8090/images/default-profile.png'}
+                              src={
+                                user.profile_picture_url ||
+                                "http://localhost:8090/images/default-profile.png"
+                              }
                               alt={user.name}
                               onError={(e) => {
-                                e.target.src = 'http://localhost:8090/images/default-profile.png';
+                                e.target.src =
+                                  "http://localhost:8090/images/default-profile.png";
                               }}
                             />
                           </div>
@@ -318,7 +341,11 @@ const AdminUsers = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           <button
-                            onClick={() => toast.info(`View user details for ${user.name} - Feature coming soon`)}
+                            onClick={() =>
+                              toast.info(
+                                `View user details for ${user.name} - Feature coming soon`
+                              )
+                            }
                             className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
                             title="View Details"
                           >
@@ -342,9 +369,13 @@ const AdminUsers = () => {
         ) : (
           <div className="bg-white p-12 rounded-xl shadow-lg text-center">
             <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No users found</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              No users found
+            </h3>
             <p className="text-gray-500">
-              {searchTerm ? `No users match "${searchTerm}"` : "No users have registered yet."}
+              {searchTerm
+                ? `No users match "${searchTerm}"`
+                : "No users have registered yet."}
             </p>
             {searchTerm && (
               <button
