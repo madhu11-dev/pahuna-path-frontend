@@ -6,7 +6,10 @@ import "react-toastify/dist/ReactToastify.css";
 import AdminSidebar from "../../components/AdminSidebar";
 import { 
   getDashboardStatsApi, 
-  getAllHotelsApi 
+
+  getAllStaffApi,
+
+
 } from "../../apis/Api";
 
 // --- Admin Dashboard ---
@@ -24,7 +27,8 @@ const AdminDashboard = () => {
     },
     visitor_graph_data: []
   });
-  const [hotels, setHotels] = useState([]);
+
+  const [staff, setStaff] = useState([]);
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
@@ -46,16 +50,18 @@ const AdminDashboard = () => {
 
 
 
-  // Fetch hotels data
-  const fetchHotels = async () => {
+
+
+  // Fetch staff data
+  const fetchStaff = async () => {
     try {
-      const response = await getAllHotelsApi();
+      const response = await getAllStaffApi();
       if (response.status) {
-        setHotels(response.hotels);
+        setStaff(response.data);
       }
     } catch (error) {
-      console.error("Error fetching hotels:", error);
-      toast.error("Failed to load hotels");
+      console.error("Error fetching staff:", error);
+      toast.error("Failed to load staff");
     }
   };
 
@@ -64,10 +70,15 @@ const AdminDashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "hotels") {
-      fetchHotels();
+    if (activeTab === "staff") {
+      fetchStaff();
     }
   }, [activeTab]);
+
+  // Hotel approval functions
+
+
+
 
   // Stats for dashboard
   const stats = [
@@ -78,10 +89,10 @@ const AdminDashboard = () => {
       color: "bg-blue-100 text-blue-700" 
     },
     { 
-      title: "Total Visitors", 
-      value: dashboardStats.stats.total_visitors, 
-      icon: UserCheck, 
-      color: "bg-green-100 text-green-700" 
+      title: "Pending Accommodations", 
+      value: dashboardStats.stats.pending_accommodations || 0, 
+      icon: Building2, 
+      color: "bg-red-100 text-red-700" 
     },
     { 
       title: "Total Places", 
@@ -90,8 +101,8 @@ const AdminDashboard = () => {
       color: "bg-purple-100 text-purple-700" 
     },
     { 
-      title: "Total Hotels", 
-      value: dashboardStats.stats.total_hotels, 
+      title: "Total Accommodations", 
+      value: dashboardStats.stats.total_accommodations, 
       icon: Building2, 
       color: "bg-orange-100 text-orange-700" 
     }
@@ -169,35 +180,7 @@ const AdminDashboard = () => {
 
 
 
-        {/* Hotels */}
-        {activeTab === "hotels" && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900">Hotels Management</h1>
-            {hotels.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {hotels.map((hotel) => (
-                  <div key={hotel.id} className="bg-white shadow-lg rounded-xl overflow-hidden">
-                    {hotel.image_url && (
-                      <img src={hotel.image_url} alt={hotel.name} className="w-full h-40 object-cover" />
-                    )}
-                    <div className="p-4">
-                      <p className="font-bold text-lg text-gray-900">{hotel.name}</p>
-                      <p className="text-gray-600 text-sm mb-2">{hotel.description}</p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Added: {new Date(hotel.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="bg-white p-8 rounded-xl shadow-lg text-center">
-                <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No hotels available (keeping count at 0 as requested)</p>
-              </div>
-            )}
-          </div>
-        )}
+
 
 
 
@@ -205,10 +188,36 @@ const AdminDashboard = () => {
         {activeTab === "staff" && (
           <div className="space-y-6">
             <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
-            <div className="bg-white p-8 rounded-xl shadow-lg text-center">
-              <UserCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Staff management functionality coming soon</p>
-            </div>
+            {staff.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {staff.map((staffMember) => (
+                  <div key={staffMember.id} className="bg-white border rounded-lg p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-lg text-gray-900">{staffMember.name}</h3>
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Staff
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-3 text-sm text-gray-600 mb-4">
+                      <p><span className="font-medium text-gray-900">Email:</span> {staffMember.email}</p>
+                      {staffMember.phone && (
+                        <p><span className="font-medium text-gray-900">Phone:</span> {staffMember.phone}</p>
+                      )}
+                      <p><span className="font-medium text-gray-900">Registered:</span> {new Date(staffMember.created_at).toLocaleDateString()}</p>
+                      {staffMember.email_verified_at && (
+                        <p><span className="font-medium text-gray-900">Email Verified:</span> ✓</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+                <UserCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No staff members found</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -231,8 +240,8 @@ const AdminDashboard = () => {
                 </div>
                 
                 <div className="p-4 bg-orange-50 rounded-lg">
-                  <h3 className="font-semibold text-orange-800">Total Hotels</h3>
-                  <p className="text-2xl font-bold text-orange-600">{dashboardStats.stats.total_hotels}</p>
+                  <h3 className="font-semibold text-orange-800">Total Accommodations</h3>
+                  <p className="text-2xl font-bold text-orange-600">{dashboardStats.stats.total_accommodations}</p>
                 </div>
                 
                 <div className="p-4 bg-purple-50 rounded-lg">
