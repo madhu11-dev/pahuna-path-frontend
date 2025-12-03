@@ -27,8 +27,13 @@ const LoginPage = () => {
     if (token) {
       if (utype === "ADM") {
         navigate("/admin/dashboard"); // redirect admin to dashboard
-      } else {
-        navigate("/feed"); // redirect user to feed page
+      } else if (utype === "STF"){
+        navigate("/staff/dashboard"); // redirect staff to dashboard
+      } else if (utype === "STF"){
+        navigate("/feed"); // redirect user to feed
+      } 
+      else {
+        navigate("/login");
       }
     }
   }, [navigate]);
