@@ -2,8 +2,9 @@ import { Route, Routes } from "react-router-dom";
 import AdminAccommodations from "./pages/Admin/AdminAccommodations";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminPlaces from "./pages/Admin/AdminPlaces";
+import AdminStaff from "./pages/Admin/AdminStaff";
 import AdminUsers from "./pages/Admin/AdminUsers";
-import HotelStaffRegister from "./pages/auth/HotelStaffRegister";
+
 import Loginpage from "./pages/auth/Loginpage";
 import Registerpage from "./pages/auth/Registerpage";
 import StaffDashboard from "./pages/Staff/StaffDashboard";
@@ -26,7 +27,7 @@ const App = () => {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Loginpage />} />
         <Route path="/register" element={<Registerpage />} />
-        <Route path="/hotel-staff-register" element={<HotelStaffRegister />} />
+
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -35,6 +36,7 @@ const App = () => {
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/places" element={<AdminPlaces />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/staff" element={<AdminStaff />} />
           <Route
             path="/admin/accommodations"
             element={<AdminAccommodations />}
