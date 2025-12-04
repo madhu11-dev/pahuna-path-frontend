@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Star, User, UtensilsCrossed } from 'lucide-react';
+import { User, UtensilsCrossed, Star } from 'lucide-react';
 import { newAccommodation, getAccommodations } from "../../apis/Api";
+import AccommodationDetailModal from '../../components/AccommodationDetailModal';
 import FilterBar from "../../components/FilterBar";
 import SearchBar from "../../components/SearchBar";
 import { ToastContainer, toast } from "react-toastify";
@@ -21,7 +22,8 @@ const normalizeAccommodation = (accommodation) => {
         name: accommodation.name,
         type: accommodation.type,
         description: accommodation.description,
-        review: accommodation.review ?? 0,
+        averageRating: accommodation.average_rating ?? 0,
+        reviewCount: accommodation.review_count ?? 0,
         mapLink: accommodation.google_map_link || '#',
         image: images[0] || IMAGE_PLACEHOLDER,
         images,
@@ -36,6 +38,8 @@ const Accommodations = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [sortBy, setSortBy] = useState("newest");
     const [sortOrder, setSortOrder] = useState("desc");
+    const [selectedAccommodationId, setSelectedAccommodationId] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -44,7 +48,6 @@ const Accommodations = () => {
         type: 'restaurant',
         description: '',
         google_map_link: '',
-        review: '',
         place_id: '2',
         imageFiles: []
     });
@@ -86,13 +89,13 @@ const Accommodations = () => {
 
         filtered.sort((a, b) => {
             let compareResult = 0;
-            
+
             switch (sortField) {
                 case "name":
                     compareResult = a.name.localeCompare(b.name);
                     break;
                 case "rating":
-                    compareResult = (a.review || 0) - (b.review || 0);
+                    compareResult = (a.averageRating || 0) - (b.averageRating || 0);
                     break;
                 case "newest":
                     compareResult = b.id - a.id;
@@ -100,7 +103,7 @@ const Accommodations = () => {
                 default:
                     return 0;
             }
-            
+
             return order === "asc" ? compareResult : -compareResult;
         });
 
@@ -122,6 +125,30 @@ const Accommodations = () => {
         applyFiltersAndSort(accommodations, searchTerm, sortBy, sortOrder);
     }, [accommodations, searchTerm, sortBy, sortOrder]);
 
+    const handleShowDetails = (accommodationId) => {
+        setSelectedAccommodationId(accommodationId);
+        setShowDetailModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowDetailModal(false);
+        setSelectedAccommodationId(null);
+        // Refresh accommodations to get updated ratings
+        const loadData = async () => {
+            try {
+                const accommodationsResponse = await getAccommodations();
+                const normalized = (accommodationsResponse?.data || accommodationsResponse || []).map((item) =>
+                    normalizeAccommodation(item)
+                );
+                setAccommodations(normalized);
+                applyFiltersAndSort(normalized, searchTerm, sortBy, sortOrder);
+            } catch (err) {
+                console.error("Failed to refresh accommodations:", err);
+            }
+        };
+        loadData();
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -135,17 +162,10 @@ const Accommodations = () => {
             return;
         }
 
-        const reviewValue = parseFloat(newAccommodationData.review);
-        if (Number.isNaN(reviewValue) || reviewValue < 0 || reviewValue > 5) {
-            toast.error('Review must be a number between 0 and 5.');
-            return;
-        }
-
         const formData = new FormData();
         formData.append('name', newAccommodationData.name);
         formData.append('type', newAccommodationData.type);
         formData.append('description', newAccommodationData.description);
-        formData.append('review', reviewValue.toString());
         formData.append('google_map_link', newAccommodationData.google_map_link);
         formData.append('place_id', newAccommodationData.place_id);
         newAccommodationData.imageFiles.forEach((file) => formData.append('images[]', file));
@@ -162,7 +182,6 @@ const Accommodations = () => {
                     type: 'restaurant',
                     description: '',
                     google_map_link: '',
-                    review: '',
                     place_id: '2',
                     imageFiles: []
                 });
@@ -270,10 +289,11 @@ const Accommodations = () => {
                                         <p className="text-gray-700 leading-relaxed mb-4">{item.description}</p>
 
                                         <div className="mt-auto space-y-3">
+                                            {/* Rating Display */}
                                             <div className="flex items-center gap-2">
                                                 <div className="flex items-center">
                                                     {[...Array(5)].map((_, i) => {
-                                                        const filled = i < Math.round(item.review ?? 0);
+                                                        const filled = i < Math.round(item.averageRating ?? 0);
                                                         return (
                                                             <Star
                                                                 key={i}
@@ -282,25 +302,47 @@ const Accommodations = () => {
                                                         );
                                                     })}
                                                 </div>
-                                                <span className="text-sm font-semibold text-gray-900">{item.review}</span>
+                                                <span className="text-sm font-semibold text-gray-900">
+                                                    {item.averageRating ? item.averageRating.toFixed(1) : '0.0'}
+                                                </span>
+                                                <span className="text-sm text-gray-500">({item.reviewCount || 0} reviews)</span>
                                             </div>
-                                            <div className="flex gap-2">
-                                                <a href={item.mapLink} target="_blank" rel="noopener noreferrer" className="flex-1">
-                                                    <button className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
-                                                        View on Maps
-                                                    </button>
-                                                </a>
+                                            {/* Action Buttons */}
+                                            <div className="space-y-2">
+                                                <button
+                                                    onClick={() => handleShowDetails(item.id)}
+                                                    className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                                                >
+                                                    Explore
+                                                </button>
                                             </div>
+                                            <a
+                                                href={item.mapLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="block w-full"
+                                            >
+                                                <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                                    View on Maps
+                                                </button>
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
                             </article>
                         ))}
-                    </div>
-                </main>
             </div>
-            <ToastContainer />
-        </div>
+        </main>
+            </div >
+    <ToastContainer />
+
+{/* Accommodation Detail Modal */ }
+<AccommodationDetailModal
+    accommodationId={selectedAccommodationId}
+    isOpen={showDetailModal}
+    onClose={handleCloseModal}
+/>
+        </div >
     );
 };
 

@@ -25,7 +25,6 @@ const StaffDashboard = () => {
     name: "",
     type: "guesthouse",
     description: "",
-    review: "4.0",
     google_map_link: "",
     imageFiles: [],
   });
@@ -34,7 +33,6 @@ const StaffDashboard = () => {
     name: "",
     type: "guesthouse",
     description: "",
-    review: "4.0",
     google_map_link: "",
     imageFiles: [],
   });
@@ -95,7 +93,6 @@ const StaffDashboard = () => {
           name: "",
           type: "guesthouse",
           description: "",
-          review: "4.0",
           google_map_link: "",
           imageFiles: [],
         });
@@ -219,7 +216,6 @@ const StaffDashboard = () => {
       name: accommodation.name || "",
       type: accommodation.type || "guesthouse",
       description: accommodation.description || "",
-      review: accommodation.review || "4.0",
       google_map_link: accommodation.google_map_link || "",
       imageFiles: [],
     });
@@ -361,25 +357,7 @@ const StaffDashboard = () => {
                     <option value="restaurant">Restaurant</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Rating
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="1"
-                    max="5"
-                    value={accommodationForm.review}
-                    onChange={(e) =>
-                      setAccommodationForm({
-                        ...accommodationForm,
-                        review: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Google Maps Link
@@ -563,10 +541,7 @@ const StaffDashboard = () => {
                           <span className="font-medium">Type:</span>{" "}
                           {accommodation.type}
                         </p>
-                        <p>
-                          <span className="font-medium">Rating:</span>{" "}
-                          {accommodation.review || "Not rated"}
-                        </p>
+
                         <p>
                           <span className="font-medium">Status:</span>
                           <span

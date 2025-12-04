@@ -184,17 +184,7 @@ const AdminAccommodations = () => {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex items-center">
-                            <Clock className="w-4 h-4 text-gray-400 mr-2" />
-                            <span className="text-sm text-gray-600">
-                              Rating:
-                            </span>
-                            <span className="text-sm font-medium text-gray-900 ml-1">
-                              {accommodation.review
-                                ? `${accommodation.review} ⭐`
-                                : "No rating"}
-                            </span>
-                          </div>
+
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-600">
