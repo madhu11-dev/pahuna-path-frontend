@@ -10,11 +10,12 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import { createPlace, getPlaces } from "../../apis/Api";
-import FilterBar from "../../components/FilterBar";
+import LocationSort from "../../components/LocationSort";
 import PlaceDetailModal from "../../components/PlaceDetailModal";
 import SearchBar from "../../components/SearchBar";
 import UserNavbar from "../../components/user/UserNavbar";
 import UserSidebar from "../../components/user/UserSidebar";
+import { calculateDistance, formatDistance } from "../../utils/location";
 import { IMAGE_PLACEHOLDER, resolveImageUrl } from "../../utils/media";
 
 // Constants
@@ -22,13 +23,24 @@ const MAX_DESCRIPTION_LENGTH = 2000;
 const MAX_IMAGES = 10;
 const DEFAULT_PROFILE_IMAGE = "/images/default-profile.png";
 
-const normalizePlace = (place) => {
+const normalizePlace = (place, userLocation = null) => {
   const rawImages = Array.isArray(place.images)
     ? place.images
     : place.images
     ? [place.images]
     : [];
   const images = rawImages.map(resolveImageUrl);
+
+  // Calculate distance if user location and place coordinates are available
+  let distanceFromUser = null;
+  if (userLocation && place.latitude && place.longitude) {
+    distanceFromUser = calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      place.latitude,
+      place.longitude
+    );
+  }
 
   return {
     id: place.id,
@@ -49,6 +61,7 @@ const normalizePlace = (place) => {
     createdAt: place.created_at,
     reviews: place.reviews || [],
     isVerified: place.is_verified || false,
+    distanceFromUser,
   };
 };
 
@@ -64,6 +77,8 @@ const Feedpage = () => {
   const [sortBy, setSortBy] = useState("newest");
   const [sortOrder, setSortOrder] = useState("desc");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [isLocationSortActive, setIsLocationSortActive] = useState(false);
   const [newPost, setNewPost] = useState({
     place_name: "",
     description: "",
@@ -79,9 +94,18 @@ const Feedpage = () => {
     }
     try {
       const response = await getPlaces();
-      const fetched = (response?.data || []).map(normalizePlace);
+      const fetched = (response?.data || []).map((place) =>
+        normalizePlace(place, userLocation)
+      );
       setPosts(fetched);
-      applyFiltersAndSort(fetched, searchTerm, sortBy, sortOrder);
+      applyFiltersAndSort(
+        fetched,
+        searchTerm,
+        sortBy,
+        sortOrder,
+        isLocationSortActive,
+        userLocation
+      );
     } catch (err) {
       console.error("Failed to fetch places:", err);
       setError("Unable to load places. Please try again later.");
@@ -96,52 +120,142 @@ const Feedpage = () => {
     fetchPlaces();
   }, [fetchPlaces]);
 
-  const applyFiltersAndSort = useCallback((postsToFilter, search, sortField, order) => {
-    let filtered = [...postsToFilter];
-
-    if (search) {
-      filtered = filtered.filter(post =>
-        post.name.toLowerCase().includes(search.toLowerCase())
-      );
+  // Refetch places when location is detected to ensure distance calculation
+  useEffect(() => {
+    if (userLocation) {
+      fetchPlaces(false); // Don't show loading state for location updates
     }
+  }, [userLocation]);
 
-    filtered.sort((a, b) => {
-      let compareResult = 0;
-      
-      switch (sortField) {
-        case "name":
-          compareResult = a.name.localeCompare(b.name);
-          break;
-        case "rating":
-          compareResult = (a.averageRating || 0) - (b.averageRating || 0);
-          break;
-        case "newest":
-          compareResult = new Date(b.createdAt) - new Date(a.createdAt);
-          break;
-        default:
-          return 0;
+  const applyFiltersAndSort = useCallback(
+    (
+      postsToFilter,
+      search,
+      sortField,
+      order,
+      locationSort = false,
+      userLoc = null
+    ) => {
+      let filtered = [...postsToFilter];
+
+      if (search) {
+        filtered = filtered.filter((post) =>
+          post.name.toLowerCase().includes(search.toLowerCase())
+        );
       }
-      
-      return order === "asc" ? compareResult : -compareResult;
-    });
 
-    setFilteredPosts(filtered);
-  }, []);
+      filtered.sort((a, b) => {
+        let compareResult = 0;
 
-  const handleSearch = useCallback((search) => {
-    setSearchTerm(search);
-    applyFiltersAndSort(posts, search, sortBy, sortOrder);
-  }, [posts, sortBy, sortOrder, applyFiltersAndSort]);
+        if (locationSort && userLoc) {
+          // Sort by distance when location sort is active
+          const aDistance = a.distanceFromUser || Infinity;
+          const bDistance = b.distanceFromUser || Infinity;
+          compareResult = aDistance - bDistance;
+        } else {
+          // Regular sorting
+          switch (sortField) {
+            case "name":
+              compareResult = a.name.localeCompare(b.name);
+              break;
+            case "rating":
+              compareResult = (a.averageRating || 0) - (b.averageRating || 0);
+              break;
+            case "newest":
+              compareResult = new Date(b.createdAt) - new Date(a.createdAt);
+              break;
+            default:
+              return 0;
+          }
 
-  const handleSort = useCallback((field, order) => {
-    setSortBy(field);
-    setSortOrder(order);
-    applyFiltersAndSort(posts, searchTerm, field, order);
-  }, [posts, searchTerm, applyFiltersAndSort]);
+          if (!locationSort) {
+            compareResult = order === "asc" ? compareResult : -compareResult;
+          }
+        }
+
+        return compareResult;
+      });
+
+      setFilteredPosts(filtered);
+    },
+    []
+  );
+
+  const handleSearch = useCallback(
+    (search) => {
+      setSearchTerm(search);
+      applyFiltersAndSort(posts, search, sortBy, sortOrder);
+    },
+    [posts, sortBy, sortOrder, applyFiltersAndSort]
+  );
+
+  const handleSort = useCallback(
+    (field, order) => {
+      setSortBy(field);
+      setSortOrder(order);
+      setIsLocationSortActive(false);
+      applyFiltersAndSort(posts, searchTerm, field, order, false, userLocation);
+    },
+    [posts, searchTerm, userLocation, applyFiltersAndSort]
+  );
+
+  const handleLocationSort = useCallback(
+    (location) => {
+      setUserLocation(location);
+      setIsLocationSortActive(true);
+      // Re-normalize places with new location
+      const updatedPosts = posts.map((post) => {
+        const originalPlace = {
+          id: post.id,
+          place_name: post.name,
+          description: post.description,
+          average_rating: post.averageRating,
+          review_count: post.reviewCount,
+          google_map_link: post.mapLink,
+          latitude: post.latitude,
+          longitude: post.longitude,
+          user: {
+            id: post.authorId,
+            name: post.author,
+            profile_picture_url: post.authorProfilePicture,
+          },
+          created_at: post.createdAt,
+          reviews: post.reviews,
+          is_verified: post.isVerified,
+        };
+        return normalizePlace(originalPlace, location);
+      });
+      setPosts(updatedPosts);
+      applyFiltersAndSort(
+        updatedPosts,
+        searchTerm,
+        sortBy,
+        sortOrder,
+        true,
+        location
+      );
+    },
+    [posts, searchTerm, sortBy, sortOrder, applyFiltersAndSort]
+  );
 
   useEffect(() => {
-    applyFiltersAndSort(posts, searchTerm, sortBy, sortOrder);
-  }, [posts, searchTerm, sortBy, sortOrder, applyFiltersAndSort]);
+    applyFiltersAndSort(
+      posts,
+      searchTerm,
+      sortBy,
+      sortOrder,
+      isLocationSortActive,
+      userLocation
+    );
+  }, [
+    posts,
+    searchTerm,
+    sortBy,
+    sortOrder,
+    isLocationSortActive,
+    userLocation,
+    applyFiltersAndSort,
+  ]);
 
   // Cleanup object URLs when imageFiles change
   useEffect(() => {
@@ -250,11 +364,13 @@ const Feedpage = () => {
                 />
               </div>
               <div className="w-full lg:w-auto">
-                <FilterBar
+                <LocationSort
                   onSort={handleSort}
+                  onLocationSort={handleLocationSort}
                   sortBy={sortBy}
                   sortOrder={sortOrder}
-                  className="w-full lg:w-40"
+                  isLocationActive={isLocationSortActive}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -461,10 +577,17 @@ const Feedpage = () => {
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {post.location}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-500 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {post.location}
+                      </p>
+                      {post.distanceFromUser && (
+                        <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-full">
+                          {formatDistance(post.distanceFromUser)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
