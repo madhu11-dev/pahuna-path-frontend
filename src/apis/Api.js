@@ -102,6 +102,15 @@ export const deletePlaceReview = (placeId, reviewId) =>
 // Accommodations APIs
 export const newAccommodation = (data) => post("/api/accommodations", data);
 export const getAccommodations = () => get("/api/accommodations");
+export const getAccommodation = (id) => get(`/api/accommodations/${id}`);
+
+// Accommodation Reviews APIs
+export const getAccommodationReviews = (accommodationId) =>
+  get(`/api/accommodations/${accommodationId}/reviews`);
+export const createAccommodationReview = (accommodationId, data) =>
+  post(`/api/accommodations/${accommodationId}/reviews`, data);
+export const updateAccommodationReview = (accommodationId, reviewId, data) =>
+  put(`/api/accommodations/${accommodationId}/reviews/${reviewId}`, data);
 
 // Staff APIs
 export const registerStaffApi = (data) =>
