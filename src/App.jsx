@@ -16,7 +16,6 @@ import ResetPassword from "./pages/auth/ResetPassword";
 
 import Landing from "./pages/Landing";
 import Accommodations from "./pages/user/Accommodations";
-import Explore from "./pages/user/Explore";
 import Feedpage from "./pages/user/Feedpage";
 import AdminRoutes from "./protected_routes/AdminRoutes";
 import UserRoutes from "./protected_routes/UserRoutes";
@@ -49,7 +48,6 @@ const App = () => {
         <Route element={<UserRoutes />}>
           <Route path="/feed" element={<Feedpage />} />
           <Route path="/accommodations" element={<Accommodations />} />
-          <Route path="/explore" element={<Explore />} />
         </Route>
 
         {/* Staff routes */}
