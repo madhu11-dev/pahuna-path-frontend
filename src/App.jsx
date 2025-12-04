@@ -7,6 +7,7 @@ import AdminUsers from "./pages/Admin/AdminUsers";
 
 import Loginpage from "./pages/auth/Loginpage";
 import Registerpage from "./pages/auth/Registerpage";
+import HotelStaffRegister from "./pages/auth/HotelStaffRegister";
 import StaffDashboard from "./pages/Staff/StaffDashboard";
 import StaffRoutes from "./protected_routes/StaffRoutes";
 
@@ -27,7 +28,7 @@ const App = () => {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Loginpage />} />
         <Route path="/register" element={<Registerpage />} />
-
+        <Route path="/hotel-staff-register" element={<HotelStaffRegister />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
