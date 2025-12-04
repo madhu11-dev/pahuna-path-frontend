@@ -41,6 +41,7 @@ const App = () => {
             path="/admin/accommodations"
             element={<AdminAccommodations />}
           />
+          {/* route path for admin */}
           <Route path="/admin" element={<AdminDashboard />} />
         </Route>
 
