@@ -10,6 +10,7 @@ import {
   newAccommodation,
   updateAccommodationApi,
 } from "../../apis/Api";
+import GoogleMapsPicker from "../../components/GoogleMapsPicker";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
@@ -20,6 +21,8 @@ const StaffDashboard = () => {
   });
   const [showAddAccommodation, setShowAddAccommodation] = useState(false);
   const [editingAccommodation, setEditingAccommodation] = useState(null);
+  const [selectedMapLocation, setSelectedMapLocation] = useState(null);
+  const [editSelectedMapLocation, setEditSelectedMapLocation] = useState(null);
 
   const [accommodationForm, setAccommodationForm] = useState({
     name: "",
@@ -69,6 +72,38 @@ const StaffDashboard = () => {
     fetchDashboardData();
   }, []);
 
+  const handleMapLocationSelect = (locationData) => {
+    if (locationData) {
+      setSelectedMapLocation(locationData);
+      setAccommodationForm(prevForm => ({
+        ...prevForm,
+        google_map_link: locationData.googleMapsUrl
+      }));
+    } else {
+      setSelectedMapLocation(null);
+      setAccommodationForm(prevForm => ({
+        ...prevForm,
+        google_map_link: ""
+      }));
+    }
+  };
+
+  const handleEditMapLocationSelect = (locationData) => {
+    if (locationData) {
+      setEditSelectedMapLocation(locationData);
+      setEditAccommodationForm(prevForm => ({
+        ...prevForm,
+        google_map_link: locationData.googleMapsUrl
+      }));
+    } else {
+      setEditSelectedMapLocation(null);
+      setEditAccommodationForm(prevForm => ({
+        ...prevForm,
+        google_map_link: ""
+      }));
+    }
+  };
+
   // Handle accommodation submission
   const handleAccommodationSubmit = async (e) => {
     e.preventDefault();
@@ -84,11 +119,18 @@ const StaffDashboard = () => {
         }
       });
 
+      // Add coordinates if available from Google Maps picker
+      if (selectedMapLocation) {
+        formData.append("latitude", selectedMapLocation.latitude.toString());
+        formData.append("longitude", selectedMapLocation.longitude.toString());
+      }
+
       const response = await newAccommodation(formData);
 
       if (response.status !== false) {
         toast.success("Accommodation created successfully!");
         setShowAddAccommodation(false);
+        setSelectedMapLocation(null);
         setAccommodationForm({
           name: "",
           type: "guesthouse",
@@ -128,6 +170,15 @@ const StaffDashboard = () => {
         }
       });
 
+      // Add coordinates if available from Google Maps picker
+      if (editSelectedMapLocation) {
+        formData.append("latitude", editSelectedMapLocation.latitude.toString());
+        formData.append("longitude", editSelectedMapLocation.longitude.toString());
+      }
+
+      // Add _method for Laravel PUT request via FormData
+      formData.append("_method", "PUT");
+
       const response = await updateAccommodationApi(
         editingAccommodation.id,
         formData
@@ -136,13 +187,22 @@ const StaffDashboard = () => {
       if (response.status !== false) {
         toast.success("Accommodation updated successfully!");
         setEditingAccommodation(null);
+        setEditSelectedMapLocation(null);
         fetchDashboardData();
       } else {
         toast.error(response.message || "Failed to update accommodation");
       }
     } catch (error) {
       console.error("Accommodation update error:", error);
-      toast.error("Failed to update accommodation");
+      // Show detailed validation errors if available
+      if (error.response?.data?.errors) {
+        const errorMessages = Object.values(error.response.data.errors).flat();
+        errorMessages.forEach(msg => toast.error(msg));
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error("Failed to update accommodation");
+      }
     }
   };
 
@@ -219,6 +279,10 @@ const StaffDashboard = () => {
       google_map_link: accommodation.google_map_link || "",
       imageFiles: [],
     });
+    
+    // Reset map location - don't try to initialize it to avoid coordinate issues
+    // The GoogleMapsPicker will load with default location and staff can update if needed
+    setEditSelectedMapLocation(null);
   };
 
   const { staff, accommodations } = dashboardData;
@@ -357,25 +421,42 @@ const StaffDashboard = () => {
                     <option value="restaurant">Restaurant</option>
                   </select>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Google Maps Link
-                  </label>
-                  <input
-                    type="url"
-                    value={accommodationForm.google_map_link}
-                    onChange={(e) =>
-                      setAccommodationForm({
-                        ...accommodationForm,
-                        google_map_link: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="https://maps.google.com/..."
-                  />
-                </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Location *
+                </label>
+                {(() => {
+                  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+                  return apiKey && apiKey.trim() !== '' && apiKey !== 'your_google_maps_api_key_here';
+                })() ? (
+                  <GoogleMapsPicker
+                    onLocationSelect={handleMapLocationSelect}
+                    className="w-full"
+                  />
+                ) : (
+                  <div>
+                    <input
+                      type="url"
+                      value={accommodationForm.google_map_link}
+                      onChange={(e) =>
+                        setAccommodationForm({
+                          ...accommodationForm,
+                          google_map_link: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="https://maps.google.com/..."
+                      required
+                    />
+                    <p className="text-xs text-amber-600 mt-1">
+                      📍 Google Maps integration not configured. Please paste the Google Maps link manually.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Description
@@ -494,6 +575,40 @@ const StaffDashboard = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Location
+                        </label>
+                        {(() => {
+                          const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+                          return apiKey && apiKey.trim() !== '' && apiKey !== 'your_google_maps_api_key_here';
+                        })() ? (
+                          <GoogleMapsPicker
+                            onLocationSelect={handleEditMapLocationSelect}
+                            className="w-full"
+                          />
+                        ) : (
+                          <div>
+                            <input
+                              type="url"
+                              value={editAccommodationForm.google_map_link || ''}
+                              onChange={(e) =>
+                                setEditAccommodationForm({
+                                  ...editAccommodationForm,
+                                  google_map_link: e.target.value,
+                                })
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              placeholder="https://maps.google.com/..."
+                            />
+                            <p className="text-xs text-amber-600 mt-1">
+                              📍 Google Maps integration not configured. Please paste the Google Maps link manually.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex space-x-2">
                         <button
                           type="submit"
@@ -503,7 +618,10 @@ const StaffDashboard = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setEditingAccommodation(null)}
+                          onClick={() => {
+                            setEditingAccommodation(null);
+                            setEditSelectedMapLocation(null);
+                          }}
                           className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
                         >
                           Cancel
