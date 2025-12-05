@@ -1,21 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
-import { User, UtensilsCrossed, Star } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { User, UtensilsCrossed, Star, X } from 'lucide-react';
 import { newAccommodation, getAccommodations } from "../../apis/Api";
 import AccommodationDetailModal from '../../components/AccommodationDetailModal';
-import FilterBar from "../../components/FilterBar";
 import SearchBar from "../../components/SearchBar";
+import FilterBar from "../../components/FilterBar";
+import RangeSlider from "../../components/RangeSlider";
 import { ToastContainer, toast } from "react-toastify";
 import UserSidebar from '../../components/user/UserSidebar';
 import UserNavbar from '../../components/user/UserNavbar';
 import { IMAGE_PLACEHOLDER, resolveImageUrl } from '../../utils/media';
+import { calculateDistance, formatDistance } from '../../utils/location';
 
-const normalizeAccommodation = (accommodation) => {
+const normalizeAccommodation = (accommodation, referenceLocation = null) => {
     const rawImages = Array.isArray(accommodation.images)
         ? accommodation.images
         : accommodation.images
             ? [accommodation.images]
             : [];
     const images = rawImages.map(resolveImageUrl);
+
+    let distance = null;
+    if (referenceLocation && accommodation.latitude != null && accommodation.longitude != null) {
+        // Ensure coordinates are valid numbers
+        const refLat = parseFloat(referenceLocation.latitude);
+        const refLng = parseFloat(referenceLocation.longitude);
+        const accLat = parseFloat(accommodation.latitude);
+        const accLng = parseFloat(accommodation.longitude);
+        
+        if (!isNaN(refLat) && !isNaN(refLng) && !isNaN(accLat) && !isNaN(accLng)) {
+            distance = calculateDistance(refLat, refLng, accLat, accLng);
+        }
+    }
 
     return {
         id: accommodation.id,
@@ -27,10 +43,15 @@ const normalizeAccommodation = (accommodation) => {
         mapLink: accommodation.google_map_link || '#',
         image: images[0] || IMAGE_PLACEHOLDER,
         images,
+        latitude: accommodation.latitude,
+        longitude: accommodation.longitude,
+        distance,
+        formattedDistance: distance ? formatDistance(distance) : null,
     };
 };
 
 const Accommodations = () => {
+    const location = useLocation();
     const [accommodations, setAccommodations] = useState([]);
     const [filteredAccommodations, setFilteredAccommodations] = useState([]);
     const [accommodationsLoading, setAccommodationsLoading] = useState(true);
@@ -40,6 +61,11 @@ const Accommodations = () => {
     const [sortOrder, setSortOrder] = useState("desc");
     const [selectedAccommodationId, setSelectedAccommodationId] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    
+    // Location-based filtering
+    const [referenceLocation, setReferenceLocation] = useState(null);
+    const [isLocationSortActive, setIsLocationSortActive] = useState(false);
+    const [distanceRange, setDistanceRange] = useState(5); // Default 5km
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -53,6 +79,19 @@ const Accommodations = () => {
     });
     const fileInputRef = useRef(null);
 
+    // Check for reference location from navigation state
+    useEffect(() => {
+        if (location.state?.referenceLocation) {
+            const refLoc = location.state.referenceLocation;
+            setReferenceLocation(refLoc);
+            setIsLocationSortActive(true);
+            setSortBy('distance');
+            setSortOrder('asc');
+            setDistanceRange(5); // Default to 5km when coming from a place
+            toast.info(`Finding accommodations within ${5}km of ${refLoc.placeName}`);
+        }
+    }, [location.state]);
+
     // fetch accommodations
     useEffect(() => {
         const loadData = async () => {
@@ -60,7 +99,7 @@ const Accommodations = () => {
             try {
                 const accommodationsResponse = await getAccommodations();
                 const normalized = (accommodationsResponse?.data || accommodationsResponse || []).map((item) =>
-                    normalizeAccommodation(item)
+                    normalizeAccommodation(item, referenceLocation)
                 );
 
                 setAccommodations(normalized);
@@ -76,10 +115,17 @@ const Accommodations = () => {
         };
 
         loadData();
-    }, []);
+    }, [referenceLocation]);
 
-    const applyFiltersAndSort = (accommodationsToFilter, search, sortField, order) => {
+    const applyFiltersAndSort = (accommodationsToFilter, search, sortField, order, maxDistance = null) => {
         let filtered = [...accommodationsToFilter];
+
+        // Filter by distance range if reference location is active
+        if (isLocationSortActive && referenceLocation && maxDistance !== null) {
+            filtered = filtered.filter(accommodation => 
+                accommodation.distance !== null && accommodation.distance <= maxDistance
+            );
+        }
 
         if (search) {
             filtered = filtered.filter(accommodation =>
@@ -100,6 +146,13 @@ const Accommodations = () => {
                 case "newest":
                     compareResult = b.id - a.id;
                     break;
+                case "distance":
+                    // Sort by distance, null distances go to end
+                    if (a.distance === null && b.distance === null) return 0;
+                    if (a.distance === null) return 1;
+                    if (b.distance === null) return -1;
+                    compareResult = a.distance - b.distance;
+                    break;
                 default:
                     return 0;
             }
@@ -112,18 +165,49 @@ const Accommodations = () => {
 
     const handleSearch = (search) => {
         setSearchTerm(search);
-        applyFiltersAndSort(accommodations, search, sortBy, sortOrder);
+        const maxDist = isLocationSortActive ? distanceRange : null;
+        applyFiltersAndSort(accommodations, search, sortBy, sortOrder, maxDist);
     };
 
     const handleSort = (field, order) => {
         setSortBy(field);
         setSortOrder(order);
-        applyFiltersAndSort(accommodations, searchTerm, field, order);
+        const maxDist = isLocationSortActive ? distanceRange : null;
+        applyFiltersAndSort(accommodations, searchTerm, field, order, maxDist);
+    };
+
+    const handleDistanceRangeChange = (newRange) => {
+        setDistanceRange(newRange);
+        applyFiltersAndSort(accommodations, searchTerm, sortBy, sortOrder, newRange);
+    };
+
+    const handleClearLocationFilter = async () => {
+        setReferenceLocation(null);
+        setIsLocationSortActive(false);
+        setDistanceRange(5);
+        setSortBy('newest');
+        setSortOrder('desc');
+        
+        try {
+            // Fetch fresh data and normalize without location
+            const accommodationsResponse = await getAccommodations();
+            const normalized = (accommodationsResponse?.data || accommodationsResponse || []).map((item) =>
+                normalizeAccommodation(item)
+            );
+            
+            setAccommodations(normalized);
+            applyFiltersAndSort(normalized, searchTerm, 'newest', 'desc', null);
+            toast.success('Location filter cleared');
+        } catch (error) {
+            console.error('Error clearing location filter:', error);
+            toast.error('Failed to clear location filter');
+        }
     };
 
     useEffect(() => {
-        applyFiltersAndSort(accommodations, searchTerm, sortBy, sortOrder);
-    }, [accommodations, searchTerm, sortBy, sortOrder]);
+        const maxDist = isLocationSortActive ? distanceRange : null;
+        applyFiltersAndSort(accommodations, searchTerm, sortBy, sortOrder, maxDist);
+    }, [accommodations, searchTerm, sortBy, sortOrder, distanceRange, isLocationSortActive]);
 
     const handleShowDetails = (accommodationId) => {
         setSelectedAccommodationId(accommodationId);
@@ -215,9 +299,9 @@ const Accommodations = () => {
                         <p className="text-gray-600">Discover restaurants and hotels near amazing places</p>
                     </div>
 
-                    {/* Header with Search and Filter */}
+                    {/* Header with Search and Sort */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-                        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+                        <div className="flex flex-col lg:flex-row gap-4">
                             <div className="flex-1">
                                 <SearchBar
                                     onSearch={handleSearch}
@@ -230,10 +314,42 @@ const Accommodations = () => {
                                     onSort={handleSort}
                                     sortBy={sortBy}
                                     sortOrder={sortOrder}
-                                    className="w-full lg:w-40"
+                                    className="w-full"
                                 />
                             </div>
                         </div>
+                        
+                        {/* Distance Range Filter - only show when location-based */}
+                        {isLocationSortActive && referenceLocation && (
+                            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div>
+                                        <p className="text-sm font-semibold text-blue-900 mb-1">
+                                            Near: {referenceLocation.placeName}
+                                        </p>
+                                        <p className="text-xs text-blue-700">
+                                            Showing accommodations within {distanceRange}km
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={handleClearLocationFilter}
+                                        className="p-1 hover:bg-blue-100 rounded-full transition-colors"
+                                        title="Clear location filter"
+                                    >
+                                        <X className="w-4 h-4 text-blue-700" />
+                                    </button>
+                                </div>
+                                <RangeSlider
+                                    value={distanceRange}
+                                    onChange={handleDistanceRangeChange}
+                                    min={1}
+                                    max={100}
+                                    step={1}
+                                    label="Distance Range"
+                                    unit="km"
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {/* Modal removed - accommodation adding moved to staff only */}
@@ -268,7 +384,7 @@ const Accommodations = () => {
                                         <User className="w-6 h-6 text-white" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900 flex items-center gap-3">
+                                        <h4 className="font-semibold text-gray-900 flex items-center gap-3 flex-wrap">
                                             {item.name}
                                             <span className="text-xs font-medium uppercase px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full">
                                                 {item.type}
