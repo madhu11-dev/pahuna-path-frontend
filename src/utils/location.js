@@ -80,16 +80,10 @@ export const formatDistance = (distance) => {
  */
 export const logLocationAndDistances = (userLocation, places) => {
   if (!userLocation || !places || places.length === 0) {
-    console.log("Missing user location or places data");
     return;
   }
 
-  console.log("LOCATION SORTING DEBUG:");
-  console.log(
-    `👤 Your actual location: ${userLocation.latitude}, ${userLocation.longitude}`
-  );
-  console.log("\\n📍 Places sorted by distance:");
-
+  
   // Create a copy and sort by distance
   const sortedPlaces = places
     .filter(
