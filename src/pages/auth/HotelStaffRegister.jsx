@@ -12,16 +12,11 @@ const HotelStaffRegister = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [hotelName, setHotelName] = useState("");
-  const [profilePicture, setProfilePicture] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
 
   const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
-  const [hotelNameError, setHotelNameError] = useState("");
-  const [profilePictureError, setProfilePictureError] = useState("");
 
   const getCookie = (name) => {
     const value = `; ${document.cookie}`;
@@ -63,45 +58,6 @@ const HotelStaffRegister = () => {
     else setConfirmPasswordError("Passwords do not match");
   };
 
-  const handleHotelName = (e) => {
-    setHotelName(e.target.value);
-    if (e.target.value.trim() !== "") setHotelNameError("");
-  };
-
-  const handleProfilePicture = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setProfilePictureError("File size must be less than 2MB");
-        return;
-      }
-      if (
-        !["image/jpeg", "image/png", "image/jpg", "image/gif"].includes(
-          file.type
-        )
-      ) {
-        setProfilePictureError(
-          "Please select a valid image file (JPEG, PNG, JPG, GIF)"
-        );
-        return;
-      }
-      setProfilePicture(file);
-      setProfilePictureError("");
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePicturePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeProfilePicture = () => {
-    setProfilePicture(null);
-    setProfilePicturePreview(null);
-    setProfilePictureError("");
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     let valid = true;
@@ -126,21 +82,12 @@ const HotelStaffRegister = () => {
       valid = false;
     }
 
-    if (hotelName.trim() === "") {
-      setHotelNameError("Hotel name is required");
-      valid = false;
-    }
-
     if (!valid) return;
 
     const formData = new FormData();
     formData.append("name", name);
     formData.append("email", email);
     formData.append("password", password);
-    formData.append("hotel_name", hotelName);
-    if (profilePicture) {
-      formData.append("profile_picture", profilePicture);
-    }
 
     registerStaffApi(formData)
       .then((response) => {
@@ -210,24 +157,6 @@ const HotelStaffRegister = () => {
             )}
           </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Hotel/Accommodation Name *
-            </label>
-            <input
-              type="text"
-              placeholder="Hotel/Accommodation Name"
-              value={hotelName}
-              onChange={handleHotelName}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                hotelNameError ? "border-red-500" : "border-gray-300"
-              }`}
-            />
-            {hotelNameError && (
-              <p className="text-red-500 text-xs mt-1">{hotelNameError}</p>
-            )}
-          </div>
-
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -263,67 +192,6 @@ const HotelStaffRegister = () => {
               {confirmPasswordError && (
                 <p className="text-red-500 text-xs mt-1">
                   {confirmPasswordError}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-4">
-            <div className="flex-shrink-0">
-              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 bg-gray-100 flex items-center justify-center">
-                {profilePicturePreview ? (
-                  <img
-                    src={profilePicturePreview}
-                    alt="Profile Preview"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <svg
-                    className="w-8 h-8 text-gray-400"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </div>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Profile Picture
-              </label>
-              <div className="flex items-center space-x-2">
-                <input
-                  id="profile-picture"
-                  name="profile_picture"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfilePicture}
-                  className="hidden"
-                />
-                <label
-                  htmlFor="profile-picture"
-                  className="px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md cursor-pointer transition-colors"
-                >
-                  Choose Photo
-                </label>
-                {profilePicture && (
-                  <button
-                    type="button"
-                    onClick={removeProfilePicture}
-                    className="px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 border border-red-300 rounded-md transition-colors"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-              {profilePictureError && (
-                <p className="text-red-500 text-xs mt-1">
-                  {profilePictureError}
                 </p>
               )}
             </div>
