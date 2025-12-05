@@ -121,10 +121,13 @@ export const getStaffDashboardDataApi = () => get("/api/staff/dashboard");
 export const updateStaffProfileApi = (data) =>
   post("/api/staff/profile/update", data);
 export const updateAccommodationApi = (id, data) => {
+  // Use POST with _method=PUT for FormData compatibility
+  const isFormData = data instanceof FormData;
   return axiosApi({
-    endpoint: `/api/accommodations/${id}`,
-    method: "PUT",
+    endpoint: `/api/accommodations/${id}?_method=PUT`,
+    method: "POST",
     data: data,
+    isFormData: isFormData,
     isAdmin: false,
   });
 };
