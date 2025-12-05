@@ -12,14 +12,11 @@ const RegisterPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [profilePicture, setProfilePicture] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
 
   const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
-  const [profilePictureError, setProfilePictureError] = useState("");
 
   const handleName = (e) => {
     setName(e.target.value);
@@ -57,51 +54,6 @@ const RegisterPage = () => {
     if (e.target.value.trim() !== "" && e.target.value === password) {
       setConfirmPasswordError("");
     }
-  };
-
-  const handleProfilePicture = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type and size
-      const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/jpg",
-        "image/gif",
-      ];
-      const maxSize = 2048 * 1024; // 2MB
-
-      if (!allowedTypes.includes(file.type)) {
-        setProfilePictureError(
-          "Please select a valid image file (JPEG, PNG, JPG, GIF)"
-        );
-        return;
-      }
-
-      if (file.size > maxSize) {
-        setProfilePictureError("Profile picture must be less than 2MB");
-        return;
-      }
-
-      setProfilePictureError("");
-      setProfilePicture(file);
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfilePicturePreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeProfilePicture = () => {
-    setProfilePicture(null);
-    setProfilePicturePreview(null);
-    setProfilePictureError("");
-    // Clear the input
-    const fileInput = document.getElementById("profile-picture");
-    if (fileInput) fileInput.value = "";
   };
 
   var validate = () => {
@@ -152,10 +104,6 @@ const RegisterPage = () => {
     formData.append("email", email);
     formData.append("password", password);
 
-    if (profilePicture) {
-      formData.append("profile_picture", profilePicture);
-    }
-
     try {
       const res = await registerUserApi(formData);
       if (res?.status === false) {
@@ -192,72 +140,6 @@ const RegisterPage = () => {
 
             {/* Form */}
             <form className="space-y-8">
-              {/* Profile Picture */}
-              <div className="relative">
-                <div className="flex items-center space-x-4">
-                  <div className="flex-shrink-0">
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 border-2 border-gray-300">
-                      {profilePicturePreview ? (
-                        <img
-                          src={profilePicturePreview}
-                          alt="Profile preview"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <svg
-                            className="w-8 h-8 text-gray-400"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Profile Picture
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        id="profile-picture"
-                        name="profile_picture"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProfilePicture}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="profile-picture"
-                        className="px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md cursor-pointer transition-colors"
-                      >
-                        Choose Photo
-                      </label>
-                      {profilePicture && (
-                        <button
-                          type="button"
-                          onClick={removeProfilePicture}
-                          className="px-3 py-2 text-sm text-red-600 hover:text-red-800 transition-colors"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {profilePictureError && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {profilePictureError}
-                  </p>
-                )}
-              </div>
-
               {/* Name */}
               <div className="relative mt-4">
                 <input

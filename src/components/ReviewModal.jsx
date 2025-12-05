@@ -17,16 +17,9 @@ const ReviewModal = ({ placeId, placeName, isOpen, onClose }) => {
 
     const fetchReviews = async () => {
         setLoading(true);
-        try {
             const response = await getPlaceReviews(placeId);
             const reviewsData = response?.data ?? response;
             setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-        } catch (error) {
-            console.error('Error fetching reviews:', error);
-            toast.error('Failed to load reviews');
-        } finally {
-            setLoading(false);
-        }
     };
 
     const handleSubmitReview = async (e) => {
@@ -38,20 +31,12 @@ const ReviewModal = ({ placeId, placeName, isOpen, onClose }) => {
         }
 
         setSubmitting(true);
-        try {
             const response = await createPlaceReview(placeId, newReview);
             const createdReview = response?.data ?? response;
             
             setReviews(prev => [createdReview, ...prev]);
             setNewReview({ rating: 5, comment: '' });
             toast.success('Review added successfully!');
-        } catch (error) {
-            console.error('Error submitting review:', error);
-            const message = error?.response?.data?.message || 'Failed to submit review';
-            toast.error(message);
-        } finally {
-            setSubmitting(false);
-        }
     };
 
     if (!isOpen) return null;
