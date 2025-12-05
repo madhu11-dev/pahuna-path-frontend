@@ -13,10 +13,11 @@ import { createPlace, getPlaces } from "../../apis/Api";
 import LocationSort from "../../components/LocationSort";
 import PlaceDetailModal from "../../components/PlaceDetailModal";
 import SearchBar from "../../components/SearchBar";
+import GoogleMapsPicker from "../../components/GoogleMapsPicker";
 import UserNavbar from "../../components/user/UserNavbar";
 import UserSidebar from "../../components/user/UserSidebar";
-import { calculateDistance, formatDistance } from "../../utils/location";
 import { IMAGE_PLACEHOLDER, resolveImageUrl } from "../../utils/media";
+import { calculateDistance, formatDistance, logLocationAndDistances } from "../../utils/location";
 
 // Constants
 const MAX_DESCRIPTION_LENGTH = 2000;
@@ -33,13 +34,16 @@ const normalizePlace = (place, userLocation = null) => {
 
   // Calculate distance if user location and place coordinates are available
   let distanceFromUser = null;
-  if (userLocation && place.latitude && place.longitude) {
-    distanceFromUser = calculateDistance(
-      userLocation.latitude,
-      userLocation.longitude,
-      place.latitude,
-      place.longitude
-    );
+  if (userLocation && place.latitude != null && place.longitude != null) {
+    // Ensure coordinates are valid numbers
+    const userLat = parseFloat(userLocation.latitude);
+    const userLng = parseFloat(userLocation.longitude);
+    const placeLat = parseFloat(place.latitude);
+    const placeLng = parseFloat(place.longitude);
+    
+    if (!isNaN(userLat) && !isNaN(userLng) && !isNaN(placeLat) && !isNaN(placeLng)) {
+      distanceFromUser = calculateDistance(userLat, userLng, placeLat, placeLng);
+    }
   }
 
   return {
@@ -85,6 +89,7 @@ const Feedpage = () => {
     google_map_link: "",
     imageFiles: [],
   });
+  const [selectedMapLocation, setSelectedMapLocation] = useState(null);
   const fileInputRef = useRef(null);
 
   const fetchPlaces = useCallback(async (showLoadingState = true) => {
@@ -94,18 +99,9 @@ const Feedpage = () => {
     }
     try {
       const response = await getPlaces();
-      const fetched = (response?.data || []).map((place) =>
-        normalizePlace(place, userLocation)
-      );
+      const fetched = (response?.data || []).map(place => normalizePlace(place, userLocation));
       setPosts(fetched);
-      applyFiltersAndSort(
-        fetched,
-        searchTerm,
-        sortBy,
-        sortOrder,
-        isLocationSortActive,
-        userLocation
-      );
+      applyFiltersAndSort(fetched, searchTerm, sortBy, sortOrder, isLocationSortActive, userLocation);
     } catch (err) {
       console.error("Failed to fetch places:", err);
       setError("Unable to load places. Please try again later.");
@@ -120,142 +116,130 @@ const Feedpage = () => {
     fetchPlaces();
   }, [fetchPlaces]);
 
-  // Refetch places when location is detected to ensure distance calculation
-  useEffect(() => {
-    if (userLocation) {
-      fetchPlaces(false); // Don't show loading state for location updates
-    }
-  }, [userLocation]);
+  const applyFiltersAndSort = useCallback((postsToFilter, search, sortField, order, locationSort = false, userLoc = null) => {
+    let filtered = [...postsToFilter];
 
-  const applyFiltersAndSort = useCallback(
-    (
-      postsToFilter,
-      search,
-      sortField,
-      order,
-      locationSort = false,
-      userLoc = null
-    ) => {
-      let filtered = [...postsToFilter];
-
-      if (search) {
-        filtered = filtered.filter((post) =>
-          post.name.toLowerCase().includes(search.toLowerCase())
-        );
-      }
-
-      filtered.sort((a, b) => {
-        let compareResult = 0;
-
-        if (locationSort && userLoc) {
-          // Sort by distance when location sort is active
-          const aDistance = a.distanceFromUser || Infinity;
-          const bDistance = b.distanceFromUser || Infinity;
-          compareResult = aDistance - bDistance;
-        } else {
-          // Regular sorting
-          switch (sortField) {
-            case "name":
-              compareResult = a.name.localeCompare(b.name);
-              break;
-            case "rating":
-              compareResult = (a.averageRating || 0) - (b.averageRating || 0);
-              break;
-            case "newest":
-              compareResult = new Date(b.createdAt) - new Date(a.createdAt);
-              break;
-            default:
-              return 0;
-          }
-
-          if (!locationSort) {
-            compareResult = order === "asc" ? compareResult : -compareResult;
-          }
-        }
-
-        return compareResult;
-      });
-
-      setFilteredPosts(filtered);
-    },
-    []
-  );
-
-  const handleSearch = useCallback(
-    (search) => {
-      setSearchTerm(search);
-      applyFiltersAndSort(posts, search, sortBy, sortOrder);
-    },
-    [posts, sortBy, sortOrder, applyFiltersAndSort]
-  );
-
-  const handleSort = useCallback(
-    (field, order) => {
-      setSortBy(field);
-      setSortOrder(order);
-      setIsLocationSortActive(false);
-      applyFiltersAndSort(posts, searchTerm, field, order, false, userLocation);
-    },
-    [posts, searchTerm, userLocation, applyFiltersAndSort]
-  );
-
-  const handleLocationSort = useCallback(
-    (location) => {
-      setUserLocation(location);
-      setIsLocationSortActive(true);
-      // Re-normalize places with new location
-      const updatedPosts = posts.map((post) => {
-        const originalPlace = {
-          id: post.id,
-          place_name: post.name,
-          description: post.description,
-          average_rating: post.averageRating,
-          review_count: post.reviewCount,
-          google_map_link: post.mapLink,
-          latitude: post.latitude,
-          longitude: post.longitude,
-          user: {
-            id: post.authorId,
-            name: post.author,
-            profile_picture_url: post.authorProfilePicture,
-          },
-          created_at: post.createdAt,
-          reviews: post.reviews,
-          is_verified: post.isVerified,
-        };
-        return normalizePlace(originalPlace, location);
-      });
-      setPosts(updatedPosts);
-      applyFiltersAndSort(
-        updatedPosts,
-        searchTerm,
-        sortBy,
-        sortOrder,
-        true,
-        location
+    if (search) {
+      filtered = filtered.filter(post =>
+        post.name.toLowerCase().includes(search.toLowerCase())
       );
-    },
-    [posts, searchTerm, sortBy, sortOrder, applyFiltersAndSort]
-  );
+    }
+
+    filtered.sort((a, b) => {
+      let compareResult = 0;
+      
+      if (locationSort && userLoc && sortField === 'distance') {
+        // Sort by distance when location sort is active
+        const aDistance = typeof a.distanceFromUser === 'number' ? a.distanceFromUser : Infinity;
+        const bDistance = typeof b.distanceFromUser === 'number' ? b.distanceFromUser : Infinity;
+        
+        // Ensure valid distances first
+        if (aDistance === Infinity && bDistance === Infinity) {
+          return 0; // Both invalid, maintain order
+        }
+        if (aDistance === Infinity) return 1; // a goes after b
+        if (bDistance === Infinity) return -1; // a goes before b
+        
+        compareResult = aDistance - bDistance;
+        return order === "asc" ? compareResult : -compareResult;
+      } else {
+        // Regular sorting
+        switch (sortField) {
+          case "name":
+            compareResult = a.name.localeCompare(b.name);
+            break;
+          case "rating":
+            compareResult = (a.averageRating || 0) - (b.averageRating || 0);
+            break;
+          case "newest":
+            compareResult = new Date(b.createdAt) - new Date(a.createdAt);
+            break;
+          default:
+            return 0;
+        }
+        
+        return order === "asc" ? compareResult : -compareResult;
+      }
+    });
+
+    setFilteredPosts(filtered);
+  }, []);
+
+  const handleSearch = useCallback((search) => {
+    setSearchTerm(search);
+    applyFiltersAndSort(posts, search, sortBy, sortOrder);
+  }, [posts, sortBy, sortOrder, applyFiltersAndSort]);
+
+  const handleSort = useCallback((field, order) => {
+    setIsLocationSortActive(false);
+    setUserLocation(null);
+    setSortBy(field);
+    setSortOrder(order);
+    applyFiltersAndSort(posts, searchTerm, field, order, false, null);
+  }, [posts, searchTerm, applyFiltersAndSort]);
+
+  const handleLocationSort = useCallback((location) => {
+    // Re-normalize places with new location and calculate distances
+    const updatedPosts = posts.map(post => {
+      const originalPlace = {
+        id: post.id,
+        place_name: post.name,
+        description: post.description,
+        average_rating: post.averageRating,
+        review_count: post.reviewCount,
+        google_map_link: post.mapLink,
+        latitude: post.latitude,
+        longitude: post.longitude,
+        images: post.images, // Preserve the images array
+        user: {
+          id: post.authorId,
+          name: post.author,
+          profile_picture_url: post.authorProfilePicture,
+        },
+        created_at: post.createdAt,
+        reviews: post.reviews,
+        is_verified: post.isVerified,
+      };
+      return normalizePlace(originalPlace, location);
+    });
+    
+    // Sort by distance immediately - NEAREST FIRST
+    const sortedPosts = [...updatedPosts].sort((a, b) => {
+      const aDistance = typeof a.distanceFromUser === 'number' ? a.distanceFromUser : Infinity;
+      const bDistance = typeof b.distanceFromUser === 'number' ? b.distanceFromUser : Infinity;
+      return aDistance - bDistance; // ascending order (nearest = smallest distance first)
+    });
+    
+    // Apply search filter to sorted posts
+    const filteredSortedPosts = sortedPosts.filter(post => 
+      searchTerm ? post.name.toLowerCase().includes(searchTerm.toLowerCase()) : true
+    );
+    
+    console.log('✅ FINAL SORTED ORDER (Nearest to Furthest):', 
+      filteredSortedPosts.map((p, i) => `${i+1}. ${p.name}: ${p.distanceFromUser?.toFixed(2)}km`).join('\n')
+    );
+    
+    // Update all state - ORDER MATTERS!
+    setPosts(sortedPosts);
+    setFilteredPosts(filteredSortedPosts);
+    setUserLocation(location);
+    setIsLocationSortActive(true);
+    setSortBy('distance');
+    setSortOrder('asc');
+  }, [posts, searchTerm]);
 
   useEffect(() => {
-    applyFiltersAndSort(
-      posts,
-      searchTerm,
-      sortBy,
-      sortOrder,
-      isLocationSortActive,
-      userLocation
-    );
-  }, [
-    posts,
-    searchTerm,
-    sortBy,
-    sortOrder,
-    isLocationSortActive,
-    userLocation,
-    applyFiltersAndSort,
-  ]);
+    // Only apply regular sorting when NOT in location sort mode
+    if (!isLocationSortActive) {
+      applyFiltersAndSort(posts, searchTerm, sortBy, sortOrder, false, null);
+    } else {
+      // In location sort mode, only filter by search term without re-sorting
+      const filtered = posts.filter(post => 
+        searchTerm ? post.name.toLowerCase().includes(searchTerm.toLowerCase()) : true
+      );
+      setFilteredPosts(filtered);
+    }
+  }, [posts, searchTerm, sortBy, sortOrder, isLocationSortActive, applyFiltersAndSort]);
 
   // Cleanup object URLs when imageFiles change
   useEffect(() => {
@@ -265,15 +249,41 @@ const Feedpage = () => {
     };
   }, [newPost.imageFiles]);
 
+  const handleMapLocationSelect = (locationData) => {
+    if (locationData) {
+      setSelectedMapLocation(locationData);
+      setNewPost(prevPost => ({
+        ...prevPost,
+        google_map_link: locationData.googleMapsUrl
+      }));
+    } else {
+      setSelectedMapLocation(null);
+      setNewPost(prevPost => ({
+        ...prevPost,
+        google_map_link: ""
+      }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Check validation based on whether Google Maps API is available
+    const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+    const hasGoogleMapsAPI = apiKey && apiKey.trim() !== '' && apiKey !== 'your_google_maps_api_key_here';
+    const hasValidLocation = hasGoogleMapsAPI 
+      ? selectedMapLocation 
+      : newPost.google_map_link.trim();
+      
     if (
       !newPost.place_name ||
       !newPost.description ||
-      !newPost.google_map_link
+      !hasValidLocation
     ) {
-      toast.error("Please fill in all fields.");
+      const locationError = hasGoogleMapsAPI 
+        ? "Please select a location on the map!" 
+        : "Please provide a Google Maps link!";
+      toast.error(`Please fill in all fields. ${locationError}`);
       return;
     }
 
@@ -283,10 +293,17 @@ const Feedpage = () => {
     }
 
     setIsSubmitting(true);
+    
     const formData = new FormData();
     formData.append("place_name", newPost.place_name);
     formData.append("description", newPost.description);
     formData.append("google_map_link", newPost.google_map_link);
+    
+    // Add coordinates if available
+    if (selectedMapLocation) {
+      formData.append("latitude", selectedMapLocation.latitude.toString());
+      formData.append("longitude", selectedMapLocation.longitude.toString());
+    }
     newPost.imageFiles.forEach((file) => formData.append("images[]", file));
 
     try {
@@ -304,6 +321,7 @@ const Feedpage = () => {
           google_map_link: "",
           imageFiles: [],
         });
+        setSelectedMapLocation(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -479,21 +497,39 @@ const Feedpage = () => {
                   </div>
                   <div>
                     <label className="block text-gray-700 font-medium mb-2">
-                      Google Maps Link *
+                      Location *
                     </label>
-                    <input
-                      type="url"
-                      placeholder="https://maps.google.com/..."
-                      value={newPost.google_map_link}
-                      onChange={(e) =>
-                        setNewPost({
-                          ...newPost,
-                          google_map_link: e.target.value,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-lg p-3"
-                      required
-                    />
+                    {(() => {
+                      const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+                      return apiKey && apiKey.trim() !== '' && apiKey !== 'your_google_maps_api_key_here';
+                    })() ? (
+                      <GoogleMapsPicker
+                        onLocationSelect={handleMapLocationSelect}
+                        className="w-full"
+                      />
+                    ) : (
+                      <div>
+                        <input
+                          type="url"
+                          placeholder="https://maps.google.com/..."
+                          value={newPost.google_map_link}
+                          onChange={(e) =>
+                            setNewPost({
+                              ...newPost,
+                              google_map_link: e.target.value,
+                            })
+                          }
+                          className="w-full border border-gray-300 rounded-lg p-3 mb-2"
+                          required
+                        />
+                        <p className="text-xs text-amber-600">
+                          📍 Google Maps integration not configured. Please paste the Google Maps link manually.
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Debug: API Key = {process.env.REACT_APP_GOOGLE_MAPS_API_KEY ? 'Present' : 'Missing'}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex justify-end gap-3 pt-4">
@@ -582,11 +618,6 @@ const Feedpage = () => {
                         <MapPin className="w-3 h-3" />
                         {post.location}
                       </p>
-                      {post.distanceFromUser && (
-                        <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-full">
-                          {formatDistance(post.distanceFromUser)}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
