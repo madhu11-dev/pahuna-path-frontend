@@ -181,3 +181,14 @@ export const newlocation = (data) => createPlace(data);
 
 // Export utility functions
 export { getCookie };
+
+// User profile APIs
+export const getUserProfileApi = () => get("/api/user/profile");
+
+export const updateUserProfileApi = (data) => {
+  const isFormData = data instanceof FormData;
+  // Prefer POST for multipart/form-data, otherwise use PUT
+  return axiosApi({ endpoint: "/api/user/profile", method: isFormData ? "POST" : "PUT", data, isFormData });
+};
+
+export const updateUserPasswordApi = (data) => post("/api/user/password", data);

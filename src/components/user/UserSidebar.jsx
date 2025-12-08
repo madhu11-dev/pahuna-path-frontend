@@ -5,7 +5,7 @@ const navItems = [
     { key: 'places', label: 'Places', icon: MapPin, route: '/feed' },
     { key: 'accommodations', label: 'Accommodations', icon: UtensilsCrossed, route: '/accommodations' },
     { key: 'bookings', label: 'Bookings', icon: Bookmark, route: '/feed' },
-    { key: 'profile', label: 'Profile', icon: User, route: '/feed' },
+    { key: 'profile', label: 'Profile', icon: User, route: '/profile' },
 ];
 
 const UserSidebar = ({ active }) => {
