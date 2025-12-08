@@ -62,13 +62,20 @@ const Profile = () => {
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append('name', form.name);
-    // Only append file when provided
-    if (pictureFile) formData.append('profile_picture', pictureFile);
-
     try {
-      const res = await updateUserProfileApi(formData);
+      let res;
+      // If there's a picture file, use multipart/form-data. Otherwise send JSON to avoid multipart+PATCH issues.
+      if (pictureFile) {
+        const formData = new FormData();
+        formData.append('name', form.name);
+        formData.append('profile_picture', pictureFile);
+        // updateUserProfileApi will convert FormData to POST with _method=PATCH
+        res = await updateUserProfileApi(formData);
+      } else {
+        // send JSON payload
+        const payload = { name: form.name };
+        res = await updateUserProfileApi(payload);
+      }
       const updated = res?.data ?? res;
       setProfile(updated || { ...profile, name: form.name });
       // Update cookies if backend returns updated values
