@@ -22,6 +22,7 @@ const Profile = () => {
 
   const [pwdForm, setPwdForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [pwdSubmitting, setPwdSubmitting] = useState(false);
+  const [pwdErrors, setPwdErrors] = useState({});
 
   useEffect(() => {
     const load = async () => {
@@ -94,16 +95,29 @@ const Profile = () => {
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    if (pwdForm.new_password !== pwdForm.confirm_password) {
+    // Normalize values to avoid mismatch from stray whitespace
+    const newPw = (pwdForm.new_password || '').trim();
+    const confirmPw = (pwdForm.confirm_password || '').trim();
+
+    if (!newPw) {
+      setPwdErrors({ confirm: 'New password cannot be empty' });
+      toast.error('New password cannot be empty');
+      return;
+    }
+
+    if (newPw !== confirmPw) {
+      setPwdErrors({ confirm: 'New password and confirmation do not match' });
       toast.error('New password and confirmation do not match');
       return;
     }
+    setPwdErrors({});
     setPwdSubmitting(true);
     try {
-      const payload = { current_password: pwdForm.current_password, new_password: pwdForm.new_password };
+      const payload = { current_password: pwdForm.current_password, new_password: newPw, new_password_confirmation: confirmPw };
       await updateUserPasswordApi(payload);
       toast.success('Password updated successfully');
       setPwdForm({ current_password: '', new_password: '', confirm_password: '' });
+      setPwdErrors({});
     } catch (err) {
       console.error('Password update failed', err);
       const msg = err?.response?.data?.message || 'Failed to update password';
