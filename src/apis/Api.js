@@ -181,3 +181,26 @@ export const newlocation = (data) => createPlace(data);
 
 // Export utility functions
 export { getCookie };
+
+// User profile APIs
+export const getUserProfileApi = () => get("/api/user");
+
+export const updateUserProfileApi = (data) => {
+  const isFormData = data instanceof FormData;
+  // If sending multipart/form-data, some servers don't handle PATCH+multipart well.
+  // Use POST with method override when sending FormData to ensure Laravel receives fields correctly.
+  if (isFormData) {
+    try {
+      data.append('_method', 'PATCH');
+    } catch (e) {
+      // ignore
+    }
+    return axiosApi({ endpoint: "/api/user", method: "POST", data, isFormData: true });
+  }
+
+  // Otherwise send JSON with PATCH
+  return axiosApi({ endpoint: "/api/user", method: "PATCH", data, isFormData: false });
+};
+
+// Password change endpoint (backend uses POST /api/user/change-password)
+export const updateUserPasswordApi = (data) => post("/api/user/change-password", data);
