@@ -15,14 +15,13 @@ const getCookie = (name) => {
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', email: '' });
   const [pictureFile, setPictureFile] = useState(null);
+  const [picturePreview, setPicturePreview] = useState(null);
   const fileInputRef = useRef(null);
 
   const [pwdForm, setPwdForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [pwdSubmitting, setPwdSubmitting] = useState(false);
-  const [pwdErrors, setPwdErrors] = useState({});
 
   useEffect(() => {
     const load = async () => {
@@ -30,19 +29,10 @@ const Profile = () => {
       try {
         const res = await getUserProfileApi();
         const data = res?.data ?? res;
-        if (data) {
-          setProfile(data);
-          setForm({ name: data.name || '', email: data.email || '' });
-        } else {
-          // Fallback to cookies set on login
-          const name = getCookie('user_name');
-          const email = getCookie('user_email');
-          const picture = getCookie('user_profile_picture');
-          setProfile({ name, email, profile_picture_url: picture });
-          setForm({ name: name || '', email: email || '' });
-        }
+        setProfile(data);
+        setForm({ name: data.name || '', email: data.email || '' });
       } catch (err) {
-        // Fallback to cookies
+        console.error('Failed to load profile:', err);
         const name = getCookie('user_name');
         const email = getCookie('user_email');
         const picture = getCookie('user_profile_picture');
@@ -56,72 +46,82 @@ const Profile = () => {
     load();
   }, []);
 
+  // Cleanup preview URL
+  useEffect(() => {
+    return () => {
+      if (picturePreview) {
+        URL.revokeObjectURL(picturePreview);
+      }
+    };
+  }, [picturePreview]);
+
   const handleFileChange = (e) => {
     const f = e.target.files[0];
-    if (f) setPictureFile(f);
+    if (f) {
+      setPictureFile(f);
+      setPicturePreview(URL.createObjectURL(f));
+    }
+  };
+
+  const removePicture = () => {
+    setPictureFile(null);
+    setPicturePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     try {
-      let res;
-      // If there's a picture file, use multipart/form-data. Otherwise send JSON to avoid multipart+PATCH issues.
+      const formData = new FormData();
+      formData.append('name', form.name);
       if (pictureFile) {
-        const formData = new FormData();
-        formData.append('name', form.name);
         formData.append('profile_picture', pictureFile);
-        // updateUserProfileApi will convert FormData to POST with _method=PATCH
-        res = await updateUserProfileApi(formData);
-      } else {
-        // send JSON payload
-        const payload = { name: form.name };
-        res = await updateUserProfileApi(payload);
       }
+      
+      const res = await updateUserProfileApi(formData);
       const updated = res?.data ?? res;
-      setProfile(updated || { ...profile, name: form.name });
-      // Update cookies if backend returns updated values
+      setProfile(updated);
+      
       if (updated?.name) document.cookie = `user_name=${updated.name}; path=/; max-age=${24*60*60}`;
       if (updated?.profile_picture_url) document.cookie = `user_profile_picture=${updated.profile_picture_url}; path=/; max-age=${24*60*60}`;
+      
       toast.success('Profile updated successfully');
-      setEditing(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
       setPictureFile(null);
+      setPicturePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       console.error('Profile update failed', err);
-      const msg = err?.response?.data?.message || 'Failed to update profile';
-      toast.error(msg);
+      toast.error(err?.response?.data?.message || 'Failed to update profile');
     }
   };
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    // Normalize values to avoid mismatch from stray whitespace
-    const newPw = (pwdForm.new_password || '').trim();
-    const confirmPw = (pwdForm.confirm_password || '').trim();
+    const newPw = pwdForm.new_password.trim();
+    const confirmPw = pwdForm.confirm_password.trim();
 
     if (!newPw) {
-      setPwdErrors({ confirm: 'New password cannot be empty' });
       toast.error('New password cannot be empty');
       return;
     }
 
     if (newPw !== confirmPw) {
-      setPwdErrors({ confirm: 'New password and confirmation do not match' });
-      toast.error('New password and confirmation do not match');
+      toast.error('Passwords do not match');
       return;
     }
-    setPwdErrors({});
+
     setPwdSubmitting(true);
     try {
-      const payload = { current_password: pwdForm.current_password, new_password: newPw, new_password_confirmation: confirmPw };
-      await updateUserPasswordApi(payload);
+      await updateUserPasswordApi({ 
+        current_password: pwdForm.current_password, 
+        new_password: newPw, 
+        new_password_confirmation: confirmPw 
+      });
       toast.success('Password updated successfully');
       setPwdForm({ current_password: '', new_password: '', confirm_password: '' });
-      setPwdErrors({});
     } catch (err) {
       console.error('Password update failed', err);
-      const msg = err?.response?.data?.message || 'Failed to update password';
-      toast.error(msg);
+      toast.error(err?.response?.data?.message || 'Failed to update password');
     } finally {
       setPwdSubmitting(false);
     }
@@ -164,8 +164,28 @@ const Profile = () => {
                     <input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-lg" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Profile picture</label>
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="mt-1" />
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Profile picture</label>
+                    {picturePreview && (
+                      <div className="mb-3 relative inline-block">
+                        <img src={picturePreview} alt="Preview" className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200" />
+                        <button
+                          type="button"
+                          onClick={removePicture}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-sm flex items-center justify-center hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <input ref={fileInputRef} id="profile-pic-upload" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                      <label htmlFor="profile-pic-upload" className="px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-lg cursor-pointer transition-colors text-sm">
+                        {pictureFile ? 'Change Photo' : 'Choose Photo'}
+                      </label>
+                      {pictureFile && (
+                        <span className="text-sm text-gray-600">{pictureFile.name}</span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-3">
                     <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg">Save changes</button>
@@ -190,7 +210,7 @@ const Profile = () => {
                     <input type="password" value={pwdForm.confirm_password} onChange={(e) => setPwdForm({...pwdForm, confirm_password: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-lg" />
                   </div>
                   <div className="flex gap-3">
-                    <button type="submit" disabled={pwdSubmitting} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Update password</button>
+                    <button type="submit" disabled={pwdSubmitting} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50">Update password</button>
                   </div>
                 </div>
               </form>
