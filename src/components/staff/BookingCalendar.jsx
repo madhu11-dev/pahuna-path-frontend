@@ -116,30 +116,10 @@ Check-out: ${new Date(booking.check_out_date).toLocaleDateString()}
         editable={false}
         selectable={false}
       />
-
-      {/* Temporary list view until packages are installed */}
-      <div className="space-y-2">
-        <h3 className="font-semibold text-gray-700 mb-3">Upcoming Bookings</h3>
-        {events.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No bookings found</p>
-        ) : (
-          events.slice(0, 10).map((event) => (
-            <div
-              key={event.id}
-              className="p-3 border rounded-lg hover:bg-gray-50"
-              style={{ borderLeftWidth: '4px', borderLeftColor: event.backgroundColor }}
-            >
-              <div className="font-medium">{event.title}</div>
-              <div className="text-sm text-gray-600">
-                {new Date(event.start).toLocaleDateString()} - {new Date(event.end).toLocaleDateString()}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
     </div>
   );
 };
 
 export default BookingCalendar;
+
 
