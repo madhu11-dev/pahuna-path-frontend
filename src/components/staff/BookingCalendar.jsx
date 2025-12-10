@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-// TODO: Uncomment after running npm install
-// import FullCalendar from '@fullcalendar/react';
-// import dayGridPlugin from '@fullcalendar/daygrid';
-// import timeGridPlugin from '@fullcalendar/timegrid';
-// import interactionPlugin from '@fullcalendar/interaction';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
 import { toast } from 'react-toastify';
 import { getBookingsApi } from '../../apis/Api';
 
@@ -103,8 +102,6 @@ Check-out: ${new Date(booking.check_out_date).toLocaleDateString()}
         </div>
       </div>
 
-      {/* TODO: Uncomment after npm install */}
-      {/*
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
@@ -119,7 +116,6 @@ Check-out: ${new Date(booking.check_out_date).toLocaleDateString()}
         editable={false}
         selectable={false}
       />
-      */}
 
       {/* Temporary list view until packages are installed */}
       <div className="space-y-2">
@@ -146,3 +142,4 @@ Check-out: ${new Date(booking.check_out_date).toLocaleDateString()}
 };
 
 export default BookingCalendar;
+
