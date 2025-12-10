@@ -1,7 +1,7 @@
 import { Building2, Edit3, LogOut, Plus, Users, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import {
   deleteAccommodationApi,
   getCookie,
@@ -11,10 +11,16 @@ import {
   updateAccommodationApi,
 } from "../../apis/Api";
 import GoogleMapsPicker from "../../components/GoogleMapsPicker";
+import RoomManagement from "../../components/RoomManagement";
+import ExtraServiceManagement from "../../components/ExtraServiceManagement";
+import StaffNavbar from "../../components/staff/StaffNavbar";
+import BookingCalendar from "../../components/staff/BookingCalendar";
+import TransactionsList from "../../components/staff/TransactionsList";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('hotels');
   const [dashboardData, setDashboardData] = useState({
     staff: {},
     accommodations: [],
@@ -23,6 +29,7 @@ const StaffDashboard = () => {
   const [editingAccommodation, setEditingAccommodation] = useState(null);
   const [selectedMapLocation, setSelectedMapLocation] = useState(null);
   const [editSelectedMapLocation, setEditSelectedMapLocation] = useState(null);
+  const [selectedAccommodationId, setSelectedAccommodationId] = useState(null);
 
   const [accommodationForm, setAccommodationForm] = useState({
     name: "",
@@ -300,6 +307,8 @@ const StaffDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+      
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -318,28 +327,34 @@ const StaffDashboard = () => {
           </button>
         </div>
 
-        {/* Profile Management */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex items-center mb-4">
-            <h3 className="text-xl font-bold text-gray-900 flex items-center">
-              <Users className="w-6 h-6 text-emerald-600 mr-2" />
-              Profile Information
-            </h3>
-          </div>
+        {/* Tab Navigation */}
+        <StaffNavbar activeTab={activeTab} onTabChange={setActiveTab} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Name</label>
-              <p className="text-gray-900">{staff?.name || "Not provided"}</p>
+        {/* Profile Management - Only show on hotels tab */}
+        {activeTab === 'hotels' && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div className="flex items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                <Users className="w-6 h-6 text-emerald-600 mr-2" />
+                Profile Information
+              </h3>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Email</label>
-              <p className="text-gray-900">{staff?.email || "Not provided"}</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Name</label>
+                <p className="text-gray-900">{staff?.name || "Not provided"}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Email</label>
+                <p className="text-gray-900">{staff?.email || "Not provided"}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Accommodation Management */}
+        {/* Accommodation Management - Hotels tab */}
+        {activeTab === 'hotels' && (
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900 flex items-center">
@@ -710,6 +725,26 @@ const StaffDashboard = () => {
                             )}
                           </div>
                         )}
+                      
+                      <div className="mt-4">
+                        <button
+                          onClick={() => setSelectedAccommodationId(
+                            selectedAccommodationId === accommodation.id ? null : accommodation.id
+                          )}
+                          className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+                        >
+                          {selectedAccommodationId === accommodation.id 
+                            ? "Hide Rooms & Services" 
+                            : "Manage Rooms & Services"}
+                        </button>
+                      </div>
+
+                      {selectedAccommodationId === accommodation.id && (
+                        <div className="mt-4 space-y-4">
+                          <RoomManagement accommodationId={accommodation.id} />
+                          <ExtraServiceManagement accommodationId={accommodation.id} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -727,6 +762,39 @@ const StaffDashboard = () => {
             )}
           </div>
         </div>
+        )}
+
+        {/* Rooms Tab - Show message to manage rooms from Hotels tab */}
+        {activeTab === 'rooms' && (
+          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Room Management
+            </h3>
+            <p className="text-gray-600">
+              Please go to the Hotels tab and expand an accommodation to manage its rooms
+            </p>
+          </div>
+        )}
+
+        {/* Services Tab - Show message to manage services from Hotels tab */}
+        {activeTab === 'services' && (
+          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Services Management
+            </h3>
+            <p className="text-gray-600">
+              Please go to the Hotels tab and expand an accommodation to manage its services
+            </p>
+          </div>
+        )}
+
+        {/* Bookings Tab - Calendar view */}
+        {activeTab === 'bookings' && <BookingCalendar />}
+
+        {/* Transactions Tab - Transactions list */}
+        {activeTab === 'transactions' && <TransactionsList />}
       </div>
     </div>
   );

@@ -2,8 +2,24 @@ import axios from "axios";
 
 export const BASE_URL = "http://localhost:8090";
 
-// Configure axios to include cookies with requests
 axios.defaults.withCredentials = true;
+
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      localStorage.removeItem("token");
+      localStorage.removeItem("admin_token");
+      
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 const getCookie = (name) => {
   const value = `; ${document.cookie}`;
@@ -15,7 +31,6 @@ const getCookie = (name) => {
 const getHeaders = (isFormData = false, isAdmin = false) => {
   const headers = {};
 
-  // Get appropriate token based on user type
   let token;
   if (isAdmin) {
     const adminTokenFromCookie = getCookie("admin_token");
@@ -51,7 +66,7 @@ const axiosApi = async ({
       method,
       headers: getHeaders(isFormData, isAdmin),
       data: isFormData ? data : data ? JSON.stringify(data) : undefined,
-      withCredentials: true, // Include cookies in requests
+      withCredentials: true,
     });
     return response.data;
   } catch (error) {
@@ -187,8 +202,6 @@ export const getUserProfileApi = () => get("/api/user");
 
 export const updateUserProfileApi = (data) => {
   const isFormData = data instanceof FormData;
-  // If sending multipart/form-data, some servers don't handle PATCH+multipart well.
-  // Use POST with method override when sending FormData to ensure Laravel receives fields correctly.
   if (isFormData) {
     try {
       data.append('_method', 'PATCH');
@@ -202,5 +215,66 @@ export const updateUserProfileApi = (data) => {
   return axiosApi({ endpoint: "/api/user", method: "PATCH", data, isFormData: false });
 };
 
-// Password change endpoint (backend uses POST /api/user/change-password)
 export const updateUserPasswordApi = (data) => post("/api/user/change-password", data);
+
+// Room APIs
+export const getRoomsApi = (accommodationId) => get(`/api/accommodations/${accommodationId}/rooms`);
+export const createRoomApi = (accommodationId, data) => post(`/api/accommodations/${accommodationId}/rooms`, data);
+export const updateRoomApi = (accommodationId, roomId, data) => {
+  const isFormData = data instanceof FormData;
+  return axiosApi({
+    endpoint: `/api/accommodations/${accommodationId}/rooms/${roomId}?_method=PUT`,
+    method: "POST",
+    data: data,
+    isFormData: isFormData,
+    isAdmin: false,
+  });
+};
+export const deleteRoomApi = (accommodationId, roomId) => del(`/api/accommodations/${accommodationId}/rooms/${roomId}`);
+export const checkRoomAvailabilityApi = (accommodationId, roomId, data) => post(`/api/accommodations/${accommodationId}/rooms/${roomId}/availability`, data);
+
+// Extra Services APIs
+export const getExtraServicesApi = (accommodationId) => get(`/api/accommodations/${accommodationId}/services`);
+export const createExtraServiceApi = (accommodationId, data) => post(`/api/accommodations/${accommodationId}/services`, data);
+export const updateExtraServiceApi = (accommodationId, serviceId, data) => put(`/api/accommodations/${accommodationId}/services/${serviceId}`, data);
+export const deleteExtraServiceApi = (accommodationId, serviceId) => del(`/api/accommodations/${accommodationId}/services/${serviceId}`);
+
+// Booking APIs
+export const getBookingsApi = () => get("/api/bookings");
+export const getBookingApi = (bookingId) => get(`/api/bookings/${bookingId}`);
+export const createBookingApi = (data) => post("/api/bookings", data);
+export const updateBookingStatusApi = (bookingId, data) => {
+  return axiosApi({
+    endpoint: `/api/bookings/${bookingId}/status`,
+    method: "PATCH",
+    data: data,
+    isFormData: false,
+    isAdmin: false,
+  });
+};
+export const cancelBookingApi = (bookingId, data) => {
+  return axiosApi({
+    endpoint: `/api/bookings/${bookingId}/cancel`,
+    method: "PATCH",
+    data: data,
+    isFormData: false,
+    isAdmin: false,
+  });
+};
+
+// Payment APIs
+export const verifyPaymentApi = (data) => post("/api/payments/verify", data);
+export const initiateRefundApi = (bookingId, data) => post(`/api/payments/refund/${bookingId}`, data);
+export const getBookingPaymentInfoApi = (bookingId) => get(`/api/payments/booking/${bookingId}`);
+
+// Transaction APIs
+export const getUserTransactionsApi = () => get("/api/transactions/user");
+export const getStaffTransactionsApi = (params) => {
+  let query = "/api/transactions/staff";
+  if (params) {
+    const queryParams = new URLSearchParams(params).toString();
+    if (queryParams) query += `?${queryParams}`;
+  }
+  return get(query);
+};
+export const getTransactionDetailsApi = (transactionId) => get(`/api/transactions/${transactionId}`);

@@ -1,36 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Star, MapPin, Calendar, User, MessageSquare, X, Building2 } from 'lucide-react';
-import { getAccommodation, getAccommodationReviews, createAccommodationReview } from '../apis/Api';
+import { useNavigate } from 'react-router-dom';
+import { getAccommodation, getAccommodationReviews, createAccommodationReview, getRoomsApi, checkRoomAvailabilityApi } from '../apis/Api';
 import { resolveImageUrl, IMAGE_PLACEHOLDER } from '../utils/media';
 import { toast } from 'react-toastify';
 
 const AccommodationDetailModal = ({ accommodationId, isOpen, onClose }) => {
+    const navigate = useNavigate();
     const [accommodation, setAccommodation] = useState(null);
     const [reviews, setReviews] = useState([]);
+    const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [showReviewForm, setShowReviewForm] = useState(false);
     const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
-
-    useEffect(() => {
-        if (isOpen && accommodationId) {
-            fetchAccommodationDetails();
-        }
-    }, [isOpen, accommodationId]);
+    const [selectedDates, setSelectedDates] = useState({
+        checkIn: '',
+        checkOut: ''
+    });
+    const [roomAvailability, setRoomAvailability] = useState({});
 
     const fetchAccommodationDetails = async () => {
         setLoading(true);
         try {
-            const [accommodationResponse, reviewsResponse] = await Promise.all([
+            const [accommodationResponse, reviewsResponse, roomsResponse] = await Promise.all([
                 getAccommodation(accommodationId),
-                getAccommodationReviews(accommodationId)
+                getAccommodationReviews(accommodationId),
+                getRoomsApi(accommodationId)
             ]);
             
             const accommodationData = accommodationResponse?.data ?? accommodationResponse;
             const reviewsData = reviewsResponse?.data ?? reviewsResponse;
+            const roomsData = roomsResponse?.data ?? roomsResponse;
             
             setAccommodation(accommodationData);
             setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+            setRooms(Array.isArray(roomsData) ? roomsData : []);
         } catch (error) {
             console.error('Error fetching accommodation details:', error);
             toast.error('Failed to load accommodation details');
@@ -38,6 +43,49 @@ const AccommodationDetailModal = ({ accommodationId, isOpen, onClose }) => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (isOpen && accommodationId) {
+            fetchAccommodationDetails();
+        }
+    }, [isOpen, accommodationId]);
+
+    // Check availability when dates are selected
+    useEffect(() => {
+        const checkAvailability = async () => {
+            if (selectedDates.checkIn && selectedDates.checkOut && rooms.length > 0) {
+                const availabilityPromises = rooms.map(async (room) => {
+                    try {
+                        const response = await checkRoomAvailabilityApi(accommodationId, room.id, {
+                            check_in_date: selectedDates.checkIn,
+                            check_out_date: selectedDates.checkOut
+                        });
+                        return {
+                            roomId: room.id,
+                            available: response.data?.available_rooms || 0,
+                            total: response.data?.total_rooms || room.total_rooms
+                        };
+                    } catch (error) {
+                        console.error(`Error checking availability for room ${room.id}:`, error);
+                        return {
+                            roomId: room.id,
+                            available: 0,
+                            total: room.total_rooms
+                        };
+                    }
+                });
+
+                const availabilityResults = await Promise.all(availabilityPromises);
+                const availabilityMap = {};
+                availabilityResults.forEach(result => {
+                    availabilityMap[result.roomId] = result;
+                });
+                setRoomAvailability(availabilityMap);
+            }
+        };
+
+        checkAvailability();
+    }, [selectedDates.checkIn, selectedDates.checkOut, rooms, accommodationId]);
 
     const handleSubmitReview = async (e) => {
         e.preventDefault();
@@ -63,6 +111,41 @@ const AccommodationDetailModal = ({ accommodationId, isOpen, onClose }) => {
             const message = error?.response?.data?.message || 'Failed to submit review';
             toast.error(message);
         }
+    };
+
+    const handleBookRoom = (room) => {
+        if (!selectedDates.checkIn || !selectedDates.checkOut) {
+            toast.error('Please select check-in and check-out dates');
+            return;
+        }
+
+        const availability = roomAvailability[room.id];
+        if (availability && availability.available <= 0) {
+            toast.error('This room is not available for the selected dates');
+            return;
+        }
+
+        navigate('/book-accommodation', {
+            state: {
+                accommodationId: accommodationId,
+                roomId: room.id,
+                accommodationName: accommodation.name,
+                roomName: room.room_name,
+                roomPrice: room.base_price,
+                checkIn: selectedDates.checkIn,
+                checkOut: selectedDates.checkOut
+            }
+        });
+    };
+
+    const getTodayDate = () => {
+        return new Date().toISOString().split('T')[0];
+    };
+
+    const getTomorrowDate = () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
     };
 
     if (!isOpen) return null;
@@ -191,6 +274,112 @@ const AccommodationDetailModal = ({ accommodationId, isOpen, onClose }) => {
                                     <MapPin className="w-4 h-4" />
                                     <span>View on Google Maps</span>
                                 </a>
+                            </div>
+                        )}
+
+                        {/* Date Selection */}
+                        <div className="border-t border-gray-200 pt-6">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Dates</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Check-in Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={selectedDates.checkIn}
+                                        onChange={(e) => setSelectedDates({ ...selectedDates, checkIn: e.target.value })}
+                                        min={getTodayDate()}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Check-out Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={selectedDates.checkOut}
+                                        onChange={(e) => setSelectedDates({ ...selectedDates, checkOut: e.target.value })}
+                                        min={selectedDates.checkIn || getTomorrowDate()}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Available Rooms */}
+                        {rooms.length > 0 && (
+                            <div className="border-t border-gray-200 pt-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Rooms</h3>
+                                <div className="space-y-4">
+                                    {rooms.map((room) => {
+                                        const availability = roomAvailability[room.id];
+                                        const isAvailable = !selectedDates.checkIn || !selectedDates.checkOut || (availability && availability.available > 0);
+                                        const availableCount = availability?.available;
+                                        
+                                        return (
+                                            <div key={room.id} className={`border rounded-lg p-4 transition ${
+                                                isAvailable ? 'border-gray-200 hover:shadow-md' : 'border-red-200 bg-red-50'
+                                            }`}>
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <h4 className="text-lg font-semibold text-gray-800">
+                                                                {room.room_name}
+                                                            </h4>
+                                                            {selectedDates.checkIn && selectedDates.checkOut && (
+                                                                <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                                                    isAvailable 
+                                                                        ? 'bg-green-100 text-green-700' 
+                                                                        : 'bg-red-100 text-red-700'
+                                                                }`}>
+                                                                    {isAvailable 
+                                                                        ? `${availableCount} Available` 
+                                                                        : 'Unavailable'
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-3 text-sm text-gray-600 mt-2">
+                                                            <span className="capitalize bg-gray-100 px-2 py-1 rounded">
+                                                                {room.room_type}
+                                                            </span>
+                                                            <span className={`px-2 py-1 rounded ${room.has_ac ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`}>
+                                                                {room.has_ac ? 'AC' : 'Non-AC'}
+                                                            </span>
+                                                            <span className="bg-gray-100 px-2 py-1 rounded">
+                                                                {room.capacity} Guests
+                                                            </span>
+                                                            <span className="bg-gray-100 px-2 py-1 rounded">
+                                                                {room.total_rooms} Total Rooms
+                                                            </span>
+                                                        </div>
+                                                        {room.description && (
+                                                            <p className="text-sm text-gray-600 mt-2">
+                                                                {room.description}
+                                                            </p>
+                                                        )}
+                                                        <p className="text-xl font-bold text-emerald-600 mt-2">
+                                                            Rs. {room.base_price} <span className="text-sm text-gray-600">/ night</span>
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleBookRoom(room)}
+                                                        disabled={!isAvailable}
+                                                        className={`ml-4 px-6 py-2 rounded-lg transition ${
+                                                            isAvailable
+                                                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        }`}
+                                                    >
+                                                        {isAvailable ? 'Book Now' : 'Unavailable'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         )}
 
