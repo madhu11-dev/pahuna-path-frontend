@@ -84,7 +84,10 @@ const ResetPassword = () => {
         toast.success(res?.message || "Password updated successfully.");
         setPassword("");
         setConfirmPassword("");
-        navigate("/login");
+        // Delay navigation to show the success toast
+        setTimeout(() => {
+          navigate("/login");
+        }, 1000);
       }
     } catch (err) {
       if (err.response?.data?.message) {
