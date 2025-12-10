@@ -18,6 +18,9 @@ import Landing from "./pages/Landing";
 import Accommodations from "./pages/user/Accommodations";
 import Feedpage from "./pages/user/Feedpage";
 import Profile from "./pages/user/Profile";
+import BookingPage from "./pages/user/BookingPage";
+import MyBookings from "./pages/user/MyBookings";
+import Transactions from "./pages/user/Transactions";
 import AdminRoutes from "./protected_routes/AdminRoutes";
 import UserRoutes from "./protected_routes/UserRoutes";
 
@@ -51,6 +54,9 @@ const App = () => {
           <Route path="/feed" element={<Feedpage />} />
           <Route path="/accommodations" element={<Accommodations />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/book-accommodation" element={<BookingPage />} />
+          <Route path="/my-bookings" element={<MyBookings />} />
+          <Route path="/transactions" element={<Transactions />} />
         </Route>
 
         {/* Staff routes */}
