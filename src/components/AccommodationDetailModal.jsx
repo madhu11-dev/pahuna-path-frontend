@@ -317,64 +317,92 @@ const AccommodationDetailModal = ({ accommodationId, isOpen, onClose }) => {
                                         const availability = roomAvailability[room.id];
                                         const isAvailable = !selectedDates.checkIn || !selectedDates.checkOut || (availability && availability.available > 0);
                                         const availableCount = availability?.available;
+                                        const roomImages = Array.isArray(room.images) ? room.images : [];
+                                        const hasImages = roomImages.length > 0;
                                         
                                         return (
-                                            <div key={room.id} className={`border rounded-lg p-4 transition ${
+                                            <div key={room.id} className={`border rounded-lg overflow-hidden transition ${
                                                 isAvailable ? 'border-gray-200 hover:shadow-md' : 'border-red-200 bg-red-50'
                                             }`}>
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <h4 className="text-lg font-semibold text-gray-800">
-                                                                {room.room_name}
-                                                            </h4>
-                                                            {selectedDates.checkIn && selectedDates.checkOut && (
-                                                                <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                                                    isAvailable 
-                                                                        ? 'bg-green-100 text-green-700' 
-                                                                        : 'bg-red-100 text-red-700'
-                                                                }`}>
-                                                                    {isAvailable 
-                                                                        ? `${availableCount} Available` 
-                                                                        : 'Unavailable'
-                                                                    }
-                                                                </span>
+                                                <div className="flex flex-col md:flex-row">
+                                                    {/* Room Image */}
+                                                    {hasImages && (
+                                                        <div className="md:w-1/3 h-48 md:h-auto relative bg-gray-100">
+                                                            <img
+                                                                src={resolveImageUrl(roomImages[0])}
+                                                                alt={room.room_name}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.src = IMAGE_PLACEHOLDER;
+                                                                }}
+                                                            />
+                                                            {roomImages.length > 1 && (
+                                                                <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
+                                                                    +{roomImages.length - 1} more
+                                                                </div>
                                                             )}
                                                         </div>
-                                                        <div className="flex flex-wrap gap-3 text-sm text-gray-600 mt-2">
-                                                            <span className="capitalize bg-gray-100 px-2 py-1 rounded">
-                                                                {room.room_type}
-                                                            </span>
-                                                            <span className={`px-2 py-1 rounded ${room.has_ac ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`}>
-                                                                {room.has_ac ? 'AC' : 'Non-AC'}
-                                                            </span>
-                                                            <span className="bg-gray-100 px-2 py-1 rounded">
-                                                                {room.capacity} Guests
-                                                            </span>
-                                                            <span className="bg-gray-100 px-2 py-1 rounded">
-                                                                {room.total_rooms} Total Rooms
-                                                            </span>
+                                                    )}
+                                                    
+                                                    {/* Room Details */}
+                                                    <div className="flex-1 p-4">
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    <h4 className="text-lg font-semibold text-gray-800">
+                                                                        {room.room_name}
+                                                                    </h4>
+                                                                    {selectedDates.checkIn && selectedDates.checkOut && (
+                                                                        <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                                                            isAvailable 
+                                                                                ? 'bg-green-100 text-green-700' 
+                                                                                : 'bg-red-100 text-red-700'
+                                                                        }`}>
+                                                                            {isAvailable 
+                                                                                ? `${availableCount} Available` 
+                                                                                : 'Unavailable'
+                                                                            }
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex flex-wrap gap-3 text-sm text-gray-600 mt-2">
+                                                                    <span className="capitalize bg-gray-100 px-2 py-1 rounded">
+                                                                        {room.room_type}
+                                                                    </span>
+                                                                    <span className={`px-2 py-1 rounded ${room.has_ac ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`}>
+                                                                        {room.has_ac ? 'AC' : 'Non-AC'}
+                                                                    </span>
+                                                                    <span className="bg-gray-100 px-2 py-1 rounded">
+                                                                        {room.capacity} Guests
+                                                                    </span>
+                                                                    <span className="bg-gray-100 px-2 py-1 rounded">
+                                                                        {room.total_rooms} Total Rooms
+                                                                    </span>
+                                                                </div>
+                                                                {room.description && (
+                                                                    <p className="text-sm text-gray-600 mt-2">
+                                                                        {room.description}
+                                                                    </p>
+                                                                )}
+                                                                <div className="flex items-center justify-between mt-3">
+                                                                    <p className="text-xl font-bold text-emerald-600">
+                                                                        Rs. {room.base_price} <span className="text-sm text-gray-600">/ night</span>
+                                                                    </p>
+                                                                    <button
+                                                                        onClick={() => handleBookRoom(room)}
+                                                                        disabled={!isAvailable}
+                                                                        className={`px-6 py-2 rounded-lg transition ${
+                                                                            isAvailable
+                                                                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                                        }`}
+                                                                    >
+                                                                        {isAvailable ? 'Book Now' : 'Unavailable'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        {room.description && (
-                                                            <p className="text-sm text-gray-600 mt-2">
-                                                                {room.description}
-                                                            </p>
-                                                        )}
-                                                        <p className="text-xl font-bold text-emerald-600 mt-2">
-                                                            Rs. {room.base_price} <span className="text-sm text-gray-600">/ night</span>
-                                                        </p>
                                                     </div>
-                                                    <button
-                                                        onClick={() => handleBookRoom(room)}
-                                                        disabled={!isAvailable}
-                                                        className={`ml-4 px-6 py-2 rounded-lg transition ${
-                                                            isAvailable
-                                                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                        }`}
-                                                    >
-                                                        {isAvailable ? 'Book Now' : 'Unavailable'}
-                                                    </button>
                                                 </div>
                                             </div>
                                         );

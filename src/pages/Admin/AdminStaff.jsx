@@ -1,17 +1,17 @@
 import {
   Calendar,
   CheckCircle,
-  Eye,
   Mail,
   Search,
   Trash2,
   UserCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { deleteUserApi, getAllStaffApi } from "../../apis/Api";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminSidebar from "../../components/admin/AdminSidebar";
+import AdminPageLayout from "../../components/admin/AdminPageLayout";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const AdminStaff = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -22,6 +22,7 @@ const AdminStaff = () => {
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
   const [selectedStaff, setSelectedStaff] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, data: null });
 
   // Handle staff selection
   const handleStaffSelection = (staffId) => {
@@ -61,30 +62,34 @@ const AdminStaff = () => {
   };
 
   // Delete staff member
-  const handleDeleteStaff = async (staffId, staffName) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete staff member "${staffName}"? This action cannot be undone.`
-      )
-    ) {
-      try {
-        const response = await deleteUserApi(staffId);
-        if (response.status) {
-          toast.success("Staff member deleted successfully");
-          setSelectedStaff(selectedStaff.filter((id) => id !== staffId));
-          fetchStaff(); // Refresh the list
-        } else {
-          toast.error(response.message || "Failed to delete staff member");
-        }
-      } catch (error) {
-        console.error("Error deleting staff:", error);
-        toast.error("Failed to delete staff member");
+  const handleDeleteStaff = (staffId, staffName) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteSingle',
+      data: { staffId, staffName },
+    });
+  };
+
+  const executeDeleteStaff = async () => {
+    const { staffId } = confirmModal.data;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    try {
+      const response = await deleteUserApi(staffId);
+      if (response.status) {
+        toast.success("Staff member deleted successfully");
+        setSelectedStaff(selectedStaff.filter((id) => id !== staffId));
+        fetchStaff(); // Refresh the list
+      } else {
+        toast.error(response.message || "Failed to delete staff member");
       }
+    } catch (error) {
+      console.error("Error deleting staff:", error);
+      toast.error("Failed to delete staff member");
     }
   };
 
   // Delete multiple staff
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedStaff.length === 0) {
       toast.error("Please select staff to delete");
       return;
@@ -97,24 +102,27 @@ const AdminStaff = () => {
       })
       .join(", ");
 
-    if (
-      window.confirm(
-        `Are you sure you want to delete ${selectedStaff.length} staff members (${staffNames})? This action cannot be undone.`
-      )
-    ) {
-      try {
-        for (const staffId of selectedStaff) {
-          await deleteUserApi(staffId);
-        }
-        toast.success(
-          `${selectedStaff.length} staff members deleted successfully`
-        );
-        setSelectedStaff([]);
-        fetchStaff();
-      } catch (error) {
-        console.error("Error deleting staff:", error);
-        toast.error("Failed to delete staff members");
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteBulk',
+      data: { staffNames, count: selectedStaff.length },
+    });
+  };
+
+  const executeBulkDelete = async () => {
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    try {
+      for (const staffId of selectedStaff) {
+        await deleteUserApi(staffId);
       }
+      toast.success(
+        `${selectedStaff.length} staff members deleted successfully`
+      );
+      setSelectedStaff([]);
+      fetchStaff();
+    } catch (error) {
+      console.error("Error deleting staff:", error);
+      toast.error("Failed to delete staff members");
     }
   };
 
@@ -167,38 +175,35 @@ const AdminStaff = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        <AdminSidebar
-          activeTab="staff"
-          isSidebarOpen={isSidebarOpen}
-          setIsSidebarOpen={setIsSidebarOpen}
-        />
-        <div className="flex-1 flex items-center justify-center">
+      <AdminPageLayout
+        activeTab="staff"
+        setActiveTab={() => {}}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+      >
+        <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
         </div>
-      </div>
+      </AdminPageLayout>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <AdminSidebar
-        activeTab="staff"
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-      />
-
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                  <UserCheck className="w-8 h-8 text-emerald-600 mr-3" />
-                  Staff Management
-                </h1>
-                <p className="text-gray-600 mt-2">
+    <AdminPageLayout
+      activeTab="staff"
+      setActiveTab={() => {}}
+      isSidebarOpen={isSidebarOpen}
+      setIsSidebarOpen={setIsSidebarOpen}
+    >
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+              <UserCheck className="w-8 h-8 text-emerald-600 mr-3" />
+              Staff Management
+            </h1>
+            <p className="text-gray-600 mt-2">
                   Manage tourism partner staff members
                 </p>
               </div>
@@ -364,17 +369,6 @@ const AdminStaff = () => {
                           <div className="flex items-center justify-end space-x-2">
                             <button
                               onClick={() =>
-                                toast.info(
-                                  `View staff details for ${staffMember.name} - Feature coming soon`
-                                )
-                              }
-                              className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() =>
                                 handleDeleteStaff(
                                   staffMember.id,
                                   staffMember.name
@@ -414,10 +408,28 @@ const AdminStaff = () => {
               )}
             </div>
           )}
-        </div>
-      </div>
-      <ToastContainer position="top-right" />
-    </div>
+      
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, action: null, data: null })}
+        onConfirm={() => {
+          if (confirmModal.action === 'deleteSingle') executeDeleteStaff();
+          else if (confirmModal.action === 'deleteBulk') executeBulkDelete();
+        }}
+        title="Confirm Deletion"
+        message={
+          confirmModal.action === 'deleteSingle'
+            ? `Are you sure you want to delete staff member "${confirmModal.data?.staffName}"? This action cannot be undone.`
+            : confirmModal.action === 'deleteBulk'
+            ? `Are you sure you want to delete ${confirmModal.data?.count} staff members (${confirmModal.data?.staffNames})? This action cannot be undone.`
+            : ''
+        }
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        confirmButtonColor="red"
+      />
+    </AdminPageLayout>
   );
 };
 

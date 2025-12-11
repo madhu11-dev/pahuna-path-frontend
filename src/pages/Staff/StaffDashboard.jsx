@@ -1,21 +1,18 @@
-import { Building2, Edit3, LogOut, Plus, Users, XCircle } from "lucide-react";
+import { Building2, LogOut, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import {
-  deleteAccommodationApi,
   getCookie,
   getStaffDashboardDataApi,
   logoutStaffApi,
-  newAccommodation,
-  updateAccommodationApi,
 } from "../../apis/Api";
-import GoogleMapsPicker from "../../components/GoogleMapsPicker";
-import RoomManagement from "../../components/RoomManagement";
-import ExtraServiceManagement from "../../components/ExtraServiceManagement";
 import StaffNavbar from "../../components/staff/StaffNavbar";
 import BookingCalendar from "../../components/staff/BookingCalendar";
 import TransactionsList from "../../components/staff/TransactionsList";
+import RoomsManagement from "../../components/staff/RoomsManagement";
+import ServicesManagement from "../../components/staff/ServicesManagement";
+import AccommodationsList from "../../components/staff/AccommodationsList";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
@@ -24,27 +21,6 @@ const StaffDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     staff: {},
     accommodations: [],
-  });
-  const [showAddAccommodation, setShowAddAccommodation] = useState(false);
-  const [editingAccommodation, setEditingAccommodation] = useState(null);
-  const [selectedMapLocation, setSelectedMapLocation] = useState(null);
-  const [editSelectedMapLocation, setEditSelectedMapLocation] = useState(null);
-  const [selectedAccommodationId, setSelectedAccommodationId] = useState(null);
-
-  const [accommodationForm, setAccommodationForm] = useState({
-    name: "",
-    type: "guesthouse",
-    description: "",
-    google_map_link: "",
-    imageFiles: [],
-  });
-
-  const [editAccommodationForm, setEditAccommodationForm] = useState({
-    name: "",
-    type: "guesthouse",
-    description: "",
-    google_map_link: "",
-    imageFiles: [],
   });
 
   // Fetch dashboard data
@@ -65,7 +41,11 @@ const StaffDashboard = () => {
       }
     } catch (error) {
       console.error("Error fetching dashboard:", error);
-      if (error.message?.includes("401")) {
+      if (error.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        navigate("/login");
+      } else if (error.response?.status === 403) {
+        toast.error("Unauthorized: You must be logged in as staff");
         navigate("/login");
       } else {
         toast.error("Failed to load dashboard");
@@ -78,162 +58,6 @@ const StaffDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  const handleMapLocationSelect = (locationData) => {
-    if (locationData) {
-      setSelectedMapLocation(locationData);
-      setAccommodationForm(prevForm => ({
-        ...prevForm,
-        google_map_link: locationData.googleMapsUrl
-      }));
-    } else {
-      setSelectedMapLocation(null);
-      setAccommodationForm(prevForm => ({
-        ...prevForm,
-        google_map_link: ""
-      }));
-    }
-  };
-
-  const handleEditMapLocationSelect = (locationData) => {
-    if (locationData) {
-      setEditSelectedMapLocation(locationData);
-      setEditAccommodationForm(prevForm => ({
-        ...prevForm,
-        google_map_link: locationData.googleMapsUrl
-      }));
-    } else {
-      setEditSelectedMapLocation(null);
-      setEditAccommodationForm(prevForm => ({
-        ...prevForm,
-        google_map_link: ""
-      }));
-    }
-  };
-
-  // Handle accommodation submission
-  const handleAccommodationSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const formData = new FormData();
-      Object.keys(accommodationForm).forEach((key) => {
-        if (key === "imageFiles") {
-          accommodationForm.imageFiles.forEach((file, index) => {
-            formData.append(`images[${index}]`, file);
-          });
-        } else {
-          formData.append(key, accommodationForm[key]);
-        }
-      });
-
-      // Add coordinates if available from Google Maps picker
-      if (selectedMapLocation) {
-        formData.append("latitude", selectedMapLocation.latitude.toString());
-        formData.append("longitude", selectedMapLocation.longitude.toString());
-      }
-
-      const response = await newAccommodation(formData);
-
-      if (response.status !== false) {
-        toast.success("Accommodation created successfully!");
-        setShowAddAccommodation(false);
-        setSelectedMapLocation(null);
-        setAccommodationForm({
-          name: "",
-          type: "guesthouse",
-          description: "",
-          google_map_link: "",
-          imageFiles: [],
-        });
-        fetchDashboardData();
-      } else {
-        toast.error(response.message || "Failed to create accommodation");
-      }
-    } catch (error) {
-      console.error("Accommodation creation error:", error);
-      if (error.response?.status === 403) {
-        toast.error("Access denied. Please log in as verified staff.");
-      } else {
-        toast.error("Failed to create accommodation");
-      }
-    }
-  };
-
-  // Handle accommodation update
-  const handleAccommodationUpdate = async (e) => {
-    e.preventDefault();
-    try {
-      const formData = new FormData();
-      Object.keys(editAccommodationForm).forEach((key) => {
-        if (
-          key === "imageFiles" &&
-          editAccommodationForm.imageFiles.length > 0
-        ) {
-          editAccommodationForm.imageFiles.forEach((file, index) => {
-            formData.append(`images[${index}]`, file);
-          });
-        } else if (key !== "imageFiles") {
-          formData.append(key, editAccommodationForm[key]);
-        }
-      });
-
-      // Add coordinates if available from Google Maps picker
-      if (editSelectedMapLocation) {
-        formData.append("latitude", editSelectedMapLocation.latitude.toString());
-        formData.append("longitude", editSelectedMapLocation.longitude.toString());
-      }
-
-      // Add _method for Laravel PUT request via FormData
-      formData.append("_method", "PUT");
-
-      const response = await updateAccommodationApi(
-        editingAccommodation.id,
-        formData
-      );
-
-      if (response.status !== false) {
-        toast.success("Accommodation updated successfully!");
-        setEditingAccommodation(null);
-        setEditSelectedMapLocation(null);
-        fetchDashboardData();
-      } else {
-        toast.error(response.message || "Failed to update accommodation");
-      }
-    } catch (error) {
-      console.error("Accommodation update error:", error);
-      // Show detailed validation errors if available
-      if (error.response?.data?.errors) {
-        const errorMessages = Object.values(error.response.data.errors).flat();
-        errorMessages.forEach(msg => toast.error(msg));
-      } else if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error("Failed to update accommodation");
-      }
-    }
-  };
-
-  // Handle accommodation delete
-  const handleAccommodationDelete = async (accommodationId) => {
-    if (
-      !window.confirm("Are you sure you want to delete this accommodation?")
-    ) {
-      return;
-    }
-
-    try {
-      const response = await deleteAccommodationApi(accommodationId);
-      if (response.status !== false) {
-        toast.success("Accommodation deleted successfully!");
-        fetchDashboardData();
-      } else {
-        toast.error(response.message || "Failed to delete accommodation");
-      }
-    } catch (error) {
-      console.error("Delete error:", error);
-      toast.error("Failed to delete accommodation");
-    }
-  };
 
   // Handle logout
   const handleLogout = async () => {
@@ -274,22 +98,6 @@ const StaffDashboard = () => {
       toast.error("Logout failed, but session cleared");
       navigate("/login");
     }
-  };
-
-  // Start editing accommodation
-  const startEditingAccommodation = (accommodation) => {
-    setEditingAccommodation(accommodation);
-    setEditAccommodationForm({
-      name: accommodation.name || "",
-      type: accommodation.type || "guesthouse",
-      description: accommodation.description || "",
-      google_map_link: accommodation.google_map_link || "",
-      imageFiles: [],
-    });
-    
-    // Reset map location - don't try to initialize it to avoid coordinate issues
-    // The GoogleMapsPicker will load with default location and staff can update if needed
-    setEditSelectedMapLocation(null);
   };
 
   const { staff, accommodations } = dashboardData;
@@ -355,439 +163,22 @@ const StaffDashboard = () => {
 
         {/* Accommodation Management - Hotels tab */}
         {activeTab === 'hotels' && (
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900 flex items-center">
-              <Building2 className="w-6 h-6 text-emerald-600 mr-2" />
-              Accommodation Management
-            </h3>
-            <button
-              onClick={() => setShowAddAccommodation(!showAddAccommodation)}
-              disabled={
-                accommodations &&
-                accommodations.length > 0 &&
-                !showAddAccommodation
-              }
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                accommodations &&
-                accommodations.length > 0 &&
-                !showAddAccommodation
-                  ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                  : "bg-emerald-600 text-white hover:bg-emerald-700"
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              <span>
-                {accommodations &&
-                accommodations.length > 0 &&
-                !showAddAccommodation
-                  ? "Already have accommodation"
-                  : showAddAccommodation
-                  ? "Cancel"
-                  : "Add Accommodation"}
-              </span>
-            </button>
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <AccommodationsList 
+              accommodations={accommodations} 
+              onRefresh={fetchDashboardData} 
+            />
           </div>
-
-          {/* Add Accommodation Form */}
-          {showAddAccommodation && (
-            <form
-              onSubmit={handleAccommodationSubmit}
-              className="mb-6 p-4 bg-gray-50 rounded-lg space-y-4"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Accommodation Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={accommodationForm.name}
-                    onChange={(e) =>
-                      setAccommodationForm({
-                        ...accommodationForm,
-                        name: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Type *
-                  </label>
-                  <select
-                    required
-                    value={accommodationForm.type}
-                    onChange={(e) =>
-                      setAccommodationForm({
-                        ...accommodationForm,
-                        type: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="guesthouse">Guesthouse</option>
-                    <option value="hotel">Hotel</option>
-                    <option value="resort">Resort</option>
-                    <option value="lodge">Lodge</option>
-                    <option value="hostel">Hostel</option>
-                    <option value="restaurant">Restaurant</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Location *
-                </label>
-                {(() => {
-                  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
-                  return apiKey && apiKey.trim() !== '' && apiKey !== 'your_google_maps_api_key_here';
-                })() ? (
-                  <GoogleMapsPicker
-                    onLocationSelect={handleMapLocationSelect}
-                    className="w-full"
-                  />
-                ) : (
-                  <div>
-                    <input
-                      type="url"
-                      value={accommodationForm.google_map_link}
-                      onChange={(e) =>
-                        setAccommodationForm({
-                          ...accommodationForm,
-                          google_map_link: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="https://maps.google.com/..."
-                      required
-                    />
-                    <p className="text-xs text-amber-600 mt-1">
-                      📍 Google Maps integration not configured. Please paste the Google Maps link manually.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={accommodationForm.description}
-                  onChange={(e) =>
-                    setAccommodationForm({
-                      ...accommodationForm,
-                      description: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Images
-                </label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={(e) =>
-                    setAccommodationForm({
-                      ...accommodationForm,
-                      imageFiles: Array.from(e.target.files),
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  You can upload multiple images
-                </p>
-              </div>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                Create Accommodation
-              </button>
-            </form>
-          )}
-
-          {/* Accommodations List */}
-          <div className="space-y-4">
-            {accommodations && accommodations.length > 0 ? (
-              accommodations.map((accommodation) => (
-                <div
-                  key={accommodation.id}
-                  className="border rounded-lg p-4 hover:shadow-md transition-shadow"
-                >
-                  {editingAccommodation &&
-                  editingAccommodation.id === accommodation.id ? (
-                    // Edit Form
-                    <form
-                      onSubmit={handleAccommodationUpdate}
-                      className="space-y-4"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Name
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={editAccommodationForm.name}
-                            onChange={(e) =>
-                              setEditAccommodationForm({
-                                ...editAccommodationForm,
-                                name: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Type
-                          </label>
-                          <select
-                            required
-                            value={editAccommodationForm.type}
-                            onChange={(e) =>
-                              setEditAccommodationForm({
-                                ...editAccommodationForm,
-                                type: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          >
-                            <option value="guesthouse">Guesthouse</option>
-                            <option value="hotel">Hotel</option>
-                            <option value="resort">Resort</option>
-                            <option value="lodge">Lodge</option>
-                            <option value="hostel">Hostel</option>
-                            <option value="restaurant">Restaurant</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Description
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={editAccommodationForm.description}
-                          onChange={(e) =>
-                            setEditAccommodationForm({
-                              ...editAccommodationForm,
-                              description: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Location
-                        </label>
-                        {(() => {
-                          const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
-                          return apiKey && apiKey.trim() !== '' && apiKey !== 'your_google_maps_api_key_here';
-                        })() ? (
-                          <GoogleMapsPicker
-                            onLocationSelect={handleEditMapLocationSelect}
-                            className="w-full"
-                          />
-                        ) : (
-                          <div>
-                            <input
-                              type="url"
-                              value={editAccommodationForm.google_map_link || ''}
-                              onChange={(e) =>
-                                setEditAccommodationForm({
-                                  ...editAccommodationForm,
-                                  google_map_link: e.target.value,
-                                })
-                              }
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                              placeholder="https://maps.google.com/..."
-                            />
-                            <p className="text-xs text-amber-600 mt-1">
-                              📍 Google Maps integration not configured. Please paste the Google Maps link manually.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <button
-                          type="submit"
-                          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-                        >
-                          Save Changes
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingAccommodation(null);
-                            setEditSelectedMapLocation(null);
-                          }}
-                          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    // Display View
-                    <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="text-lg font-semibold text-gray-900">
-                          {accommodation.name}
-                        </h4>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() =>
-                              startEditingAccommodation(accommodation)
-                            }
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleAccommodationDelete(accommodation.id)
-                            }
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <p>
-                          <span className="font-medium">Type:</span>{" "}
-                          {accommodation.type}
-                        </p>
-
-                        <p>
-                          <span className="font-medium">Status:</span>
-                          <span
-                            className={`ml-1 px-2 py-1 rounded-full text-xs ${
-                              accommodation.is_verified
-                                ? "bg-green-100 text-green-800"
-                                : "bg-orange-100 text-orange-800"
-                            }`}
-                          >
-                            {accommodation.is_verified ? "Verified" : "Pending"}
-                          </span>
-                        </p>
-                      </div>
-                      {accommodation.description && (
-                        <p className="mt-2 text-gray-600">
-                          {accommodation.description}
-                        </p>
-                      )}
-                      {accommodation.google_map_link && (
-                        <div className="mt-2">
-                          <a
-                            href={accommodation.google_map_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
-                          >
-                            View on Maps
-                          </a>
-                        </div>
-                      )}
-                      {accommodation.images &&
-                        accommodation.images.length > 0 && (
-                          <div className="mt-2 flex space-x-2">
-                            {accommodation.images
-                              .slice(0, 3)
-                              .map((image, index) => (
-                                <img
-                                  key={index}
-                                  src={image}
-                                  alt={`${accommodation.name} - ${index + 1}`}
-                                  className="w-16 h-16 object-cover rounded-lg"
-                                />
-                              ))}
-                            {accommodation.images.length > 3 && (
-                              <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center text-xs text-gray-600">
-                                +{accommodation.images.length - 3} more
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      
-                      <div className="mt-4">
-                        <button
-                          onClick={() => setSelectedAccommodationId(
-                            selectedAccommodationId === accommodation.id ? null : accommodation.id
-                          )}
-                          className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
-                        >
-                          {selectedAccommodationId === accommodation.id 
-                            ? "Hide Rooms & Services" 
-                            : "Manage Rooms & Services"}
-                        </button>
-                      </div>
-
-                      {selectedAccommodationId === accommodation.id && (
-                        <div className="mt-4 space-y-4">
-                          <RoomManagement accommodationId={accommodation.id} />
-                          <ExtraServiceManagement accommodationId={accommodation.id} />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h4 className="text-lg font-semibold text-gray-700 mb-2">
-                  No Accommodations Found
-                </h4>
-                <p className="text-gray-500">
-                  Start by adding your first accommodation
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
         )}
 
         {/* Rooms Tab - Show message to manage rooms from Hotels tab */}
         {activeTab === 'rooms' && (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              Room Management
-            </h3>
-            <p className="text-gray-600">
-              Please go to the Hotels tab and expand an accommodation to manage its rooms
-            </p>
-          </div>
+          <RoomsManagement accommodations={dashboardData.accommodations} />
         )}
 
         {/* Services Tab - Show message to manage services from Hotels tab */}
         {activeTab === 'services' && (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              Services Management
-            </h3>
-            <p className="text-gray-600">
-              Please go to the Hotels tab and expand an accommodation to manage its services
-            </p>
-          </div>
+          <ServicesManagement accommodations={dashboardData.accommodations} />
         )}
 
         {/* Bookings Tab - Calendar view */}

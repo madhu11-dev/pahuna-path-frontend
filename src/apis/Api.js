@@ -118,8 +118,11 @@ export const deletePlaceReview = (placeId, reviewId) =>
 export const newAccommodation = (data) => post("/api/accommodations", data);
 export const getAccommodations = () => get("/api/accommodations");
 export const getAccommodation = (id) => get(`/api/accommodations/${id}`);
+export const payAccommodationVerificationFee = (accommodationId, data) =>
+  post(`/api/accommodations/${accommodationId}/pay-verification`, data);
 
-// Accommodation Reviews APIs
+export const verifyVerificationPayment = (accommodationId, data) =>
+  post(`/api/accommodations/${accommodationId}/pay-verification`, data);// Accommodation Reviews APIs
 export const getAccommodationReviews = (accommodationId) =>
   get(`/api/accommodations/${accommodationId}/reviews`);
 export const createAccommodationReview = (accommodationId, data) =>

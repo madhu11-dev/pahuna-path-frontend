@@ -19,6 +19,7 @@ import PageContainer from "../../components/user/PageContainer";
 import PaymentModal from "../../components/user/PaymentModal";
 import SectionCard from "../../components/user/SectionCard";
 import StatusBadge from "../../components/user/StatusBadge";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const MyBookings = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const MyBookings = () => {
   const [refundingId, setRefundingId] = useState(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, data: null });
   const [activeTab, setActiveTab] = useState("current"); // 'current' or 'expired'
 
   useEffect(() => {
@@ -52,22 +54,24 @@ const MyBookings = () => {
     setLoading(false);
   };
 
-  const handleRefundBooking = async (bookingId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to request a refund and cancel this booking? You will receive 80% of the booking amount."
-      )
-    ) {
-      return;
-    }
+  const handleRefundBooking = (bookingId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'refund',
+      data: { bookingId },
+    });
+  };
 
+  const executeRefundBooking = async () => {
+    const { bookingId } = confirmModal.data;
+    setConfirmModal({ ...confirmModal, isOpen: false });
     setRefundingId(bookingId);
     const response = await cancelBookingApi(bookingId, {
       cancellation_reason: "Refund requested by user",
     });
 
     if (response.status) {
-      const refundAmount = response.data?.refund_amount || 0;
+      const refundAmount = response.refund_amount || response.data?.refund_amount || 0;
       const refundMessage =
         response.refund_message ||
         response.message ||
@@ -85,11 +89,17 @@ const MyBookings = () => {
     setRefundingId(null);
   };
 
-  const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) {
-      return;
-    }
+  const handleCancelBooking = (bookingId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'cancel',
+      data: { bookingId },
+    });
+  };
 
+  const executeCancelBooking = async () => {
+    const { bookingId } = confirmModal.data;
+    setConfirmModal({ ...confirmModal, isOpen: false });
     setCancellingId(bookingId);
     const response = await cancelBookingApi(bookingId, {
       cancellation_reason: "Cancelled by user",
@@ -549,6 +559,26 @@ const MyBookings = () => {
           onPaymentSuccess={handlePaymentSuccess}
         />
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, action: null, data: null })}
+        onConfirm={() => {
+          if (confirmModal.action === 'refund') executeRefundBooking();
+          else if (confirmModal.action === 'cancel') executeCancelBooking();
+        }}
+        title={confirmModal.action === 'refund' ? 'Confirm Refund Request' : 'Confirm Cancellation'}
+        message={
+          confirmModal.action === 'refund'
+            ? 'Are you sure you want to request a refund and cancel this booking? You will receive 80% of the booking amount.'
+            : 'Are you sure you want to cancel this booking?'
+        }
+        confirmText="Yes, Proceed"
+        cancelText="Cancel"
+        confirmButtonColor="red"
+      />
+
       <ToastContainer position="top-right" autoClose={3000} />
     </PageContainer>
   );

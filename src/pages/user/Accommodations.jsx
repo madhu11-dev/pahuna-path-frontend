@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { User, UtensilsCrossed, Star, X } from 'lucide-react';
-import { newAccommodation, getAccommodations } from "../../apis/Api";
+import { Filter, Menu, TrendingUp, X } from 'lucide-react';
+import { getAccommodations } from "../../apis/Api";
 import AccommodationDetailModal from '../../components/AccommodationDetailModal';
-import SearchBar from "../../components/SearchBar";
-import FilterBar from "../../components/FilterBar";
-import RangeSlider from "../../components/RangeSlider";
-import { ToastContainer, toast } from "react-toastify";
 import UserSidebar from '../../components/user/UserSidebar';
 import UserNavbar from '../../components/user/UserNavbar';
+import AccommodationCard from '../../components/user/AccommodationCard';
+import SearchBar from "../../components/user/SearchBar";
+import FilterBar from "../../components/user/FilterBar";
+import RangeSlider from "../../components/user/RangeSlider";
+import { ToastContainer, toast } from "react-toastify";
 import { IMAGE_PLACEHOLDER, resolveImageUrl } from '../../utils/media';
 import { calculateDistance, formatDistance } from '../../utils/location';
 
@@ -61,23 +62,11 @@ const Accommodations = () => {
     const [sortOrder, setSortOrder] = useState("desc");
     const [selectedAccommodationId, setSelectedAccommodationId] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
-    
-    // Location-based filtering
     const [referenceLocation, setReferenceLocation] = useState(null);
     const [isLocationSortActive, setIsLocationSortActive] = useState(false);
-    const [distanceRange, setDistanceRange] = useState(5); // Default 5km
-
-    // Modal state
-    const [showModal, setShowModal] = useState(false);
-    const [newAccommodationData, setNewAccommodationData] = useState({
-        name: '',
-        type: 'restaurant',
-        description: '',
-        google_map_link: '',
-        place_id: '2',
-        imageFiles: []
-    });
-    const fileInputRef = useRef(null);
+    const [distanceRange, setDistanceRange] = useState(5);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
 
     // Check for reference location from navigation state
     useEffect(() => {
@@ -217,7 +206,6 @@ const Accommodations = () => {
     const handleCloseModal = () => {
         setShowDetailModal(false);
         setSelectedAccommodationId(null);
-        // Refresh accommodations to get updated ratings
         const loadData = async () => {
             try {
                 const accommodationsResponse = await getAccommodations();
@@ -233,232 +221,199 @@ const Accommodations = () => {
         loadData();
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        if (!newAccommodationData.name || !newAccommodationData.description || !newAccommodationData.google_map_link) {
-            toast.error('Please fill in all required fields.');
-            return;
-        }
-
-        if (!newAccommodationData.imageFiles.length) {
-            toast.error('Please upload at least one image.');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('name', newAccommodationData.name);
-        formData.append('type', newAccommodationData.type);
-        formData.append('description', newAccommodationData.description);
-        formData.append('google_map_link', newAccommodationData.google_map_link);
-        formData.append('place_id', newAccommodationData.place_id);
-        newAccommodationData.imageFiles.forEach((file) => formData.append('images[]', file));
-
-        try {
-            const response = await newAccommodation(formData);
-            const createdAccommodation = response?.data ?? response;
-
-            if (createdAccommodation) {
-                toast.success("New accommodation successfully added!");
-                setShowModal(false);
-                setNewAccommodationData({
-                    name: '',
-                    type: 'restaurant',
-                    description: '',
-                    google_map_link: '',
-                    place_id: '2',
-                    imageFiles: []
-                });
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
-
-                // Refresh accommodation list
-                setAccommodations((prev) => [normalizeAccommodation(createdAccommodation), ...prev]);
-            } else {
-                toast.error("Failed to add accommodation. Please try again.");
-            }
-        } catch (error) {
-            console.error("Error while posting new accommodation:", error);
-            const responseMessage = error?.response?.data?.message;
-            const validationMessage = Object.values(error?.response?.data?.errors ?? {})[0]?.[0];
-            toast.error(responseMessage || validationMessage || "Something went wrong while adding the accommodation.");
-        }
-    };
-
     return (
         <div className="min-h-screen bg-gray-50">
             <UserNavbar />
 
             <div className="flex pt-20">
-                <UserSidebar active="accommodations" />
+                {/* Mobile Menu Button */}
+                <button
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="lg:hidden fixed top-24 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                    <Menu className="w-5 h-5" />
+                </button>
 
-                <main className="ml-64 flex-1 px-8 py-6 max-w-4xl mx-auto">
-                    <div className="mb-6">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Accommodations</h2>
-                        <p className="text-gray-600">Discover restaurants and hotels near amazing places</p>
-                    </div>
+                {/* Sidebar - hidden on mobile by default, always visible on desktop */}
+                <div className="hidden lg:block">
+                    <UserSidebar active="accommodations" />
+                </div>
 
-                    {/* Header with Search and Sort */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-                        <div className="flex flex-col lg:flex-row gap-4">
-                            <div className="flex-1">
-                                <SearchBar
-                                    onSearch={handleSearch}
-                                    placeholder="Search accommodations by name..."
-                                    className="w-full"
-                                />
-                            </div>
-                            <div className="w-full lg:w-auto">
-                                <FilterBar
-                                    onSort={handleSort}
-                                    sortBy={sortBy}
-                                    sortOrder={sortOrder}
-                                    className="w-full"
-                                />
+                {/* Mobile Sidebar with overlay */}
+                {sidebarOpen && (
+                    <>
+                        <div
+                            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+                            onClick={() => setSidebarOpen(false)}
+                        />
+                        <div className="lg:hidden fixed top-0 left-0 h-full z-50 animate-slideIn">
+                            <div className="relative h-full">
+                                <button
+                                    onClick={() => setSidebarOpen(false)}
+                                    className="absolute top-24 right-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200 hover:bg-gray-50"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                                <UserSidebar active="accommodations" />
                             </div>
                         </div>
-                        
-                        {/* Distance Range Filter - only show when location-based */}
-                        {isLocationSortActive && referenceLocation && (
-                            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div>
-                                        <p className="text-sm font-semibold text-blue-900 mb-1">
-                                            Near: {referenceLocation.placeName}
-                                        </p>
-                                        <p className="text-xs text-blue-700">
-                                            Showing accommodations within {distanceRange}km
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={handleClearLocationFilter}
-                                        className="p-1 hover:bg-blue-100 rounded-full transition-colors"
-                                        title="Clear location filter"
-                                    >
-                                        <X className="w-4 h-4 text-blue-700" />
-                                    </button>
+                    </>
+                )}
+
+                {/* Main Content */}
+                <main className="flex-1 w-full lg:ml-64 px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Header */}
+                        <div className="mb-6">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Accommodations</h1>
+                            <p className="text-gray-600 text-sm sm:text-base">Discover restaurants and hotels near amazing places</p>
+                        </div>
+
+                        {/* Controls Bar */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <div className="flex-1">
+                                    <SearchBar
+                                        onSearch={handleSearch}
+                                        placeholder="Search accommodations..."
+                                        className="w-full"
+                                    />
                                 </div>
-                                <RangeSlider
-                                    value={distanceRange}
-                                    onChange={handleDistanceRangeChange}
-                                    min={1}
-                                    max={100}
-                                    step={1}
-                                    label="Distance Range"
-                                    unit="km"
-                                />
+                                <button
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className="lg:hidden flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                                >
+                                    <Filter className="w-4 h-4" />
+                                    Filters
+                                </button>
+                                <div className="hidden lg:block">
+                                    <FilterBar
+                                        onSort={handleSort}
+                                        sortBy={sortBy}
+                                        sortOrder={sortOrder}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Mobile Filters */}
+                            {showFilters && (
+                                <div className="lg:hidden mt-4 pt-4 border-t border-gray-200">
+                                    <FilterBar
+                                        onSort={handleSort}
+                                        sortBy={sortBy}
+                                        sortOrder={sortOrder}
+                                    />
+                                </div>
+                            )}
+                            
+                            {/* Distance Range Filter */}
+                            {isLocationSortActive && referenceLocation && (
+                                <div className="mt-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div>
+                                            <p className="text-sm font-semibold text-blue-900 mb-1">
+                                                📍 Near: {referenceLocation.placeName}
+                                            </p>
+                                            <p className="text-xs text-blue-700">
+                                                Showing accommodations within {distanceRange}km
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={handleClearLocationFilter}
+                                            className="p-1.5 hover:bg-blue-100 rounded-full transition-colors"
+                                            title="Clear location filter"
+                                        >
+                                            <X className="w-4 h-4 text-blue-700" />
+                                        </button>
+                                    </div>
+                                    <RangeSlider
+                                        value={distanceRange}
+                                        onChange={handleDistanceRangeChange}
+                                        min={1}
+                                        max={100}
+                                        step={1}
+                                        label="Distance Range"
+                                        unit="km"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Stats Bar */}
+                        {!accommodationsLoading && accommodations.length > 0 && (
+                            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl p-4 mb-6 border border-emerald-200">
+                                <div className="flex items-center justify-between flex-wrap gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <TrendingUp className="w-5 h-5 text-emerald-600" />
+                                        <span className="font-semibold text-gray-900">
+                                            {filteredAccommodations.length} {filteredAccommodations.length === 1 ? 'Accommodation' : 'Accommodations'} Found
+                                        </span>
+                                    </div>
+                                    {isLocationSortActive && (
+                                        <span className="text-sm text-blue-700 bg-blue-100 px-3 py-1 rounded-full">
+                                            📍 Near {referenceLocation?.placeName}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         )}
-                    </div>
 
-                    {/* Modal removed - accommodation adding moved to staff only */}
-
-                    {/* Accommodations list */}
-                    <div className="space-y-6">
+                        {/* Content */}
                         {accommodationsError && (
-                            <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">{accommodationsError}</div>
+                            <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl animate-slideDown">
+                                {accommodationsError}
+                            </div>
                         )}
 
                         {accommodationsLoading && (
-                            <div className="p-4 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg">
-                                Loading accommodations...
+                            <div className="flex items-center justify-center py-12">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
                             </div>
                         )}
 
                         {!accommodationsLoading && accommodations.length === 0 && !accommodationsError && (
-                            <div className="p-8 bg-white border border-dashed border-gray-300 rounded-xl text-center text-gray-500">
-                                No accommodations shared yet. Be the first to add one!
+                            <div className="p-12 bg-white border-2 border-dashed border-gray-300 rounded-xl text-center">
+                                <div className="max-w-md mx-auto">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <TrendingUp className="w-8 h-8 text-gray-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No accommodations yet</h3>
+                                    <p className="text-gray-500">Check back later for restaurants and hotels!</p>
+                                </div>
                             </div>
                         )}
+
                         {!accommodationsLoading && accommodations.length > 0 && filteredAccommodations.length === 0 && (
-                            <div className="p-8 bg-white border border-dashed border-gray-300 rounded-xl text-center text-gray-500">
-                                No accommodations found matching your search criteria.
+                            <div className="p-8 bg-white border border-gray-200 rounded-xl text-center">
+                                <p className="text-gray-500">No accommodations found matching your criteria.</p>
                             </div>
                         )}
 
-                        {filteredAccommodations.map((item) => (
-                            <article key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                                <div className="p-4 flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center">
-                                        <User className="w-6 h-6 text-white" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900 flex items-center gap-3 flex-wrap">
-                                            {item.name}
-                                            <span className="text-xs font-medium uppercase px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full">
-                                                {item.type}
-                                            </span>
-                                        </h4>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col lg:flex-row">
-                                    <div className="lg:w-2/3">
-                                        <img
-                                            src={item.image}
-                                            alt={item.name}
-                                            className="w-full h-80 object-cover"
-                                        />
-                                    </div>
-                                    <div className="lg:w-1/3 p-6 flex flex-col">
-                                        <p className="text-gray-700 leading-relaxed mb-4">{item.description}</p>
-
-                                        <div className="mt-auto space-y-3">
-                                            {/* Rating Display */}
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex items-center">
-                                                    {[...Array(5)].map((_, i) => {
-                                                        const filled = i < Math.round(item.averageRating ?? 0);
-                                                        return (
-                                                            <Star
-                                                                key={i}
-                                                                className={`w-4 h-4 ${filled ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
-                                                            />
-                                                        );
-                                                    })}
-                                                </div>
-                                                <span className="text-sm font-semibold text-gray-900">
-                                                    {item.averageRating ? item.averageRating.toFixed(1) : '0.0'}
-                                                </span>
-                                                <span className="text-sm text-gray-500">({item.reviewCount || 0} reviews)</span>
-                                            </div>
-                                            {/* Action Buttons */}
-                                            <div className="space-y-2">
-                                                <button
-                                                    onClick={() => handleShowDetails(item.id)}
-                                                    className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
-                                                >
-                                                    Explore
-                                                </button>
-                                            </div>
-                                            <a
-                                                href={item.mapLink}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="block w-full"
-                                            >
-                                                <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                                                    View on Maps
-                                                </button>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </article>
-                        ))}
+                        {/* Accommodations Grid */}
+                        {filteredAccommodations.length > 0 && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {filteredAccommodations.map((item) => (
+                                    <AccommodationCard
+                                        key={item.id}
+                                        accommodation={item}
+                                        onExplore={() => handleShowDetails(item.id)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </main>
             </div>
-        </main>
-            </div >
-    <ToastContainer />
 
-{/* Accommodation Detail Modal */ }
-<AccommodationDetailModal
-    accommodationId={selectedAccommodationId}
-    isOpen={showDetailModal}
-    onClose={handleCloseModal}
-/>
-        </div >
+            <ToastContainer />
+
+            {/* Accommodation Detail Modal */}
+            <AccommodationDetailModal
+                accommodationId={selectedAccommodationId}
+                isOpen={showDetailModal}
+                onClose={handleCloseModal}
+            />
+        </div>
     );
 };
 

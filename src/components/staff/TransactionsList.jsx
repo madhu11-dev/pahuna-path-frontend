@@ -33,7 +33,12 @@ const TransactionsList = () => {
         setStats(response.stats);
       }
     } catch (error) {
-      toast.error('Failed to load transactions');
+      if (error.response?.status === 403) {
+        toast.error('Unauthorized: You must be logged in as staff to view transactions');
+        console.error('403 Forbidden: User is not staff or not logged in properly');
+      } else {
+        toast.error('Failed to load transactions');
+      }
       console.error(error);
     }
     setLoading(false);
@@ -50,6 +55,60 @@ const TransactionsList = () => {
       payment_method: '',
       search: ''
     });
+  };
+
+  const handleExportCSV = () => {
+    if (transactions.length === 0) {
+      toast.warning('No transactions to export');
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      'Transaction ID',
+      'Booking Reference',
+      'Type',
+      'Amount (Rs.)',
+      'Status',
+      'Payment Method',
+      'Customer Name',
+      'Customer Email',
+      'Accommodation',
+      'Date'
+    ];
+
+    // Convert transactions to CSV rows
+    const rows = transactions.map(transaction => [
+      transaction.transaction_id,
+      transaction.booking?.booking_reference || 'N/A',
+      transaction.transaction_type,
+      parseFloat(transaction.amount).toFixed(2),
+      transaction.status,
+      transaction.payment_method?.toUpperCase() || 'N/A',
+      transaction.user?.name || 'N/A',
+      transaction.user?.email || 'N/A',
+      transaction.booking?.accommodation?.name || 'N/A',
+      new Date(transaction.created_at).toLocaleString()
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Transactions exported successfully');
   };
 
   const getTransactionIcon = (type) => {
@@ -119,13 +178,14 @@ const TransactionsList = () => {
 
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center gap-4">
-              <div className="bg-yellow-100 p-3 rounded-lg">
-                <Calendar className="text-yellow-600" size={24} />
+              <div className="bg-blue-100 p-3 rounded-lg">
+                <IndianRupee className="text-blue-600" size={24} />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Pending Payments</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.pending_payments || 0}
+                <p className="text-sm text-gray-600">Total Profit</p>
+                <p className="text-2xl font-bold text-gray-900 flex items-center">
+                  <IndianRupee size={20} />
+                  {(parseFloat(stats.total_payments || 0) - parseFloat(stats.total_refunds || 0)).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -202,7 +262,10 @@ const TransactionsList = () => {
       <div className="bg-white rounded-lg border border-gray-200">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">All Transactions</h2>
-          <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
+          <button 
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+          >
             <Download size={18} />
             Export
           </button>

@@ -62,13 +62,17 @@ const UserNavbar = () => {
 
   return (
     <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
-      <div className="px-6 py-1 flex items-center justify-between gap-4">
+      <div className="px-3 sm:px-6 py-2 sm:py-1 flex items-center justify-between gap-2">
+        {/* Logo - Always visible */}
         <div className="flex items-center gap-2">
-          <img className="w-25 h-20" src="/logo.png" alt="Logo"></img>
-          <h1 className="text-2xl font-bold text-gray-900">Pahunapath</h1>
+          <img className="w-16 h-12 sm:w-25 sm:h-20 object-contain" src="/logo.png" alt="Logo"></img>
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 hidden sm:block">Pahunapath</h1>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
+        
+        {/* Right side - Profile and Logout */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Profile - Hidden on small screens */}
+          <div className="hidden md:flex items-center gap-3">
             <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 border border-gray-300 flex-shrink-0">
               <img
                 src={profilePicture}
@@ -80,18 +84,20 @@ const UserNavbar = () => {
                 }}
               />
             </div>
-            <p className="text-sm sm:text-base text-gray-600 font-medium">
+            <p className="text-sm text-gray-600 font-medium">
               Welcome,{" "}
               <span className="text-gray-900 font-semibold">{username}</span>
             </p>
           </div>
+          
+          {/* Logout Button - Always visible but text hidden on mobile */}
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
+            <span className="font-medium hidden sm:inline">Logout</span>
           </button>
         </div>
       </div>

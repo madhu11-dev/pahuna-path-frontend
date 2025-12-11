@@ -1,6 +1,5 @@
 import {
   Calendar,
-  Eye,
   Filter,
   Mail,
   Search,
@@ -9,10 +8,12 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { deleteUserApi, getAllUsersApi } from "../../apis/Api";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminPageLayout from "../../components/admin/AdminPageLayout";
+import AdminPageHeader from "../../components/admin/AdminPageHeader";
+import AdminSearchBar from "../../components/admin/AdminSearchBar";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const AdminUsers = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -23,6 +24,7 @@ const AdminUsers = () => {
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, data: null });
 
   // Fetch users data
   const fetchUsers = async () => {
@@ -44,29 +46,33 @@ const AdminUsers = () => {
   };
 
   // Delete user
-  const handleDeleteUser = async (userId, userName) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete user "${userName}"? This action cannot be undone and will also remove all their places and reviews.`
-      )
-    ) {
-      try {
-        const response = await deleteUserApi(userId);
-        if (response.status) {
-          toast.success("User deleted successfully");
-          fetchUsers(); // Refresh the list
-        } else {
-          toast.error(response.message || "Failed to delete user");
-        }
-      } catch (error) {
-        console.error("Error deleting user:", error);
-        toast.error("Failed to delete user");
+  const handleDeleteUser = (userId, userName) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteSingle',
+      data: { userId, userName },
+    });
+  };
+
+  const executeDeleteUser = async () => {
+    const { userId } = confirmModal.data;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    try {
+      const response = await deleteUserApi(userId);
+      if (response.status) {
+        toast.success("User deleted successfully");
+        fetchUsers(); // Refresh the list
+      } else {
+        toast.error(response.message || "Failed to delete user");
       }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Failed to delete user");
     }
   };
 
   // Delete multiple users
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedUsers.length === 0) {
       toast.error("Please select users to delete");
       return;
@@ -79,23 +85,26 @@ const AdminUsers = () => {
       })
       .join(", ");
 
-    if (
-      window.confirm(
-        `Are you sure you want to delete ${selectedUsers.length} users (${userNames})? This action cannot be undone.`
-      )
-    ) {
-      try {
-        // Delete users one by one (you might want to create a bulk delete API endpoint)
-        for (const userId of selectedUsers) {
-          await deleteUserApi(userId);
-        }
-        toast.success(`${selectedUsers.length} users deleted successfully`);
-        setSelectedUsers([]);
-        fetchUsers();
-      } catch (error) {
-        console.error("Error deleting users:", error);
-        toast.error("Failed to delete users");
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteBulk',
+      data: { userNames, count: selectedUsers.length },
+    });
+  };
+
+  const executeBulkDelete = async () => {
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    try {
+      // Delete users one by one (you might want to create a bulk delete API endpoint)
+      for (const userId of selectedUsers) {
+        await deleteUserApi(userId);
       }
+      toast.success(`${selectedUsers.length} users deleted successfully`);
+      setSelectedUsers([]);
+      fetchUsers();
+    } catch (error) {
+      console.error("Error deleting users:", error);
+      toast.error("Failed to delete users");
     }
   };
 
@@ -151,100 +160,95 @@ const AdminUsers = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-gray-100">
-        <AdminSidebar
-          activeTab="users"
-          setActiveTab={() => {}}
-          isSidebarOpen={isSidebarOpen}
-          setIsSidebarOpen={setIsSidebarOpen}
-        />
-        <main className="flex-1 p-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg text-gray-600">Loading users...</div>
-          </div>
-        </main>
-      </div>
+      <AdminPageLayout
+        activeTab="users"
+        setActiveTab={() => { }}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+      >
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-gray-600">Loading users...</div>
+        </div>
+      </AdminPageLayout>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar
-        activeTab="users"
-        setActiveTab={() => {}}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
+    <AdminPageLayout
+      activeTab="users"
+      setActiveTab={() => { }}
+      isSidebarOpen={isSidebarOpen}
+      setIsSidebarOpen={setIsSidebarOpen}
+    >
+      <AdminPageHeader
+        icon={Users}
+        title="Users Management"
+        subtitle="Manage all registered users and their accounts"
+        count={filteredUsers.length}
+        countLabel="Total Users"
+        actions={
+          <>
+            <div className="flex items-center space-x-3">
+              {Array.isArray(selectedUsers) && selectedUsers.length > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Selected ({selectedUsers.length})</span>
+                </button>
+              )}
+              <div className="text-sm text-gray-600 bg-white px-3 py-2 rounded-lg border">
+                Total: {filteredUsers.length} users
+              </div>
+            </div>
+          </>
+        }
       />
 
-      <main className="flex-1 p-8 overflow-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 space-y-4 sm:space-y-0">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Users Management
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Manage all registered users and their accounts
-            </p>
+
+      {/* Filters and Search */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search users by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
 
-          <div className="flex items-center space-x-3">
-            {selectedUsers.length > 0 && (
-              <button
-                onClick={handleBulkDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete Selected ({selectedUsers.length})</span>
-              </button>
-            )}
-            <div className="text-sm text-gray-600 bg-white px-3 py-2 rounded-lg border">
-              Total: {filteredUsers.length} users
-            </div>
-          </div>
-        </div>
-
-        {/* Filters and Search */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search users by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            {/* Sort By */}
-            <div className="flex items-center space-x-2">
-              <Filter className="text-gray-400 w-4 h-4" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="created_at">Date Joined</option>
-                <option value="name">Name</option>
-                <option value="email">Email</option>
-              </select>
-              <button
-                onClick={() =>
-                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                {sortOrder === "asc" ? "↑" : "↓"}
-              </button>
-            </div>
+          {/* Sort By */}
+          <div className="flex items-center space-x-2">
+            <Filter className="text-gray-400 w-4 h-4" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="created_at">Date Joined</option>
+              <option value="name">Name</option>
+              <option value="email">Email</option>
+            </select>
+            <button
+              onClick={() =>
+                setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+              }
+              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              {sortOrder === "asc" ? "↑" : "↓"}
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Users Table */}
-        {filteredUsers.length > 0 ? (
+      {/* Users Table */}
+      {
+        filteredUsers.length > 0 ? (
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -282,9 +286,8 @@ const AdminUsers = () => {
                   {filteredUsers.map((user) => (
                     <tr
                       key={user.id}
-                      className={`hover:bg-gray-50 transition-colors ${
-                        selectedUsers.includes(user.id) ? "bg-blue-50" : ""
-                      }`}
+                      className={`hover:bg-gray-50 transition-colors ${selectedUsers.includes(user.id) ? "bg-blue-50" : ""
+                        }`}
                     >
                       <td className="px-6 py-4">
                         <input
@@ -341,17 +344,6 @@ const AdminUsers = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           <button
-                            onClick={() =>
-                              toast.info(
-                                `View user details for ${user.name} - Feature coming soon`
-                              )
-                            }
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
                             onClick={() => handleDeleteUser(user.id, user.name)}
                             className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
                             title="Delete User"
@@ -386,11 +378,29 @@ const AdminUsers = () => {
               </button>
             )}
           </div>
-        )}
-      </main>
-
-      <ToastContainer position="top-right" />
-    </div>
+        )
+      }
+  {/* Confirmation Modal */ }
+  < ConfirmationModal
+isOpen = { confirmModal.isOpen }
+onClose = {() => setConfirmModal({ isOpen: false, action: null, data: null })}
+onConfirm = {() => {
+  if (confirmModal.action === 'deleteSingle') executeDeleteUser();
+  else if (confirmModal.action === 'deleteBulk') executeBulkDelete();
+}}
+title = "Confirm Deletion"
+message = {
+  confirmModal.action === 'deleteSingle'
+    ? `Are you sure you want to delete user "${confirmModal.data?.userName}"? This action cannot be undone and will also remove all their places and reviews.`
+    : confirmModal.action === 'deleteBulk'
+      ? `Are you sure you want to delete ${confirmModal.data?.count} users (${confirmModal.data?.userNames})? This action cannot be undone.`
+      : ''
+}
+confirmText = "Yes, Delete"
+cancelText = "Cancel"
+confirmButtonColor = "red"
+  />
+    </AdminPageLayout >
   );
 };
 
