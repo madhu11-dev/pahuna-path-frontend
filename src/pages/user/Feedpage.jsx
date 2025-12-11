@@ -1,5 +1,5 @@
 import { Filter, Menu, Plus, TrendingUp, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import { createPlace, getPlaces } from "../../apis/Api";
 import PlaceDetailModal from "../../components/PlaceDetailModal";
@@ -75,30 +75,9 @@ const Feedpage = () => {
   const [showModal, setShowModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-
-  const fetchPlaces = useCallback(async (showLoadingState = true) => {
-    if (showLoadingState) {
-      setLoading(true);
-      setError(null);
-    }
-    try {
-      const response = await getPlaces();
-      const fetched = (response?.data || []).map(place => normalizePlace(place, userLocation));
-      setPosts(fetched);
-      applyFiltersAndSort(fetched, searchTerm, sortBy, sortOrder, isLocationSortActive, userLocation);
-    } catch (err) {
-      console.error("Failed to fetch places:", err);
-      setError("Unable to load places. Please try again later.");
-    } finally {
-      if (showLoadingState) {
-        setLoading(false);
-      }
-    }
-  }, [userLocation, searchTerm, sortBy, sortOrder, isLocationSortActive]);
-
-  useEffect(() => {
-    fetchPlaces();
-  }, [fetchPlaces]);
+  
+  // Ref to track previous posts reference
+  const prevPostsRef = useRef(posts);
 
   const applyFiltersAndSort = useCallback((postsToFilter, search, sortField, order, locationSort = false, userLoc = null) => {
     let filtered = [...postsToFilter];
@@ -149,6 +128,37 @@ const Feedpage = () => {
     setFilteredPosts(filtered);
   }, []);
 
+  const fetchPlaces = useCallback(async (showLoadingState = true, skipSortIfLocationActive = false) => {
+    if (showLoadingState) {
+      setLoading(true);
+      setError(null);
+    }
+    try {
+      const response = await getPlaces();
+      const fetched = (response?.data || []).map(place => normalizePlace(place, null));
+      setPosts(fetched);
+      setFilteredPosts(fetched); // Set initial filtered posts to all posts
+    } catch (err) {
+      console.error("Failed to fetch places:", err);
+      setError("Unable to load places. Please try again later.");
+    } finally {
+      if (showLoadingState) {
+        setLoading(false);
+      }
+    }
+  }, []); // No dependencies - only fetch on mount
+
+  useEffect(() => {
+    fetchPlaces();
+  }, [fetchPlaces]);
+
+  // Apply initial sorting after posts are fetched
+  useEffect(() => {
+    if (posts.length > 0 && !isLocationSortActive) {
+      applyFiltersAndSort(posts, searchTerm, sortBy, sortOrder, false, null);
+    }
+  }, [posts.length]); // Only run when posts are first loaded
+
   const handleSearch = useCallback((search) => {
     setSearchTerm(search);
     applyFiltersAndSort(posts, search, sortBy, sortOrder, isLocationSortActive, userLocation);
@@ -163,6 +173,8 @@ const Feedpage = () => {
   }, [posts, searchTerm, applyFiltersAndSort]);
 
   const handleLocationSort = useCallback((location) => {
+    console.log('Location sort triggered with:', location);
+    
     // Re-normalize places with new location and calculate distances
     const updatedPosts = posts.map(post => {
       const originalPlace = {
@@ -174,7 +186,7 @@ const Feedpage = () => {
         google_map_link: post.mapLink,
         latitude: post.latitude,
         longitude: post.longitude,
-        images: post.images, // Preserve the images array
+        images: post.images,
         user: {
           id: post.authorId,
           name: post.author,
@@ -191,7 +203,7 @@ const Feedpage = () => {
     const sortedPosts = [...updatedPosts].sort((a, b) => {
       const aDistance = typeof a.distanceFromUser === 'number' ? a.distanceFromUser : Infinity;
       const bDistance = typeof b.distanceFromUser === 'number' ? b.distanceFromUser : Infinity;
-      return aDistance - bDistance; // ascending order (nearest = smallest distance first)
+      return aDistance - bDistance;
     });
     
     // Apply search filter to sorted posts
@@ -199,27 +211,42 @@ const Feedpage = () => {
       searchTerm ? post.name.toLowerCase().includes(searchTerm.toLowerCase()) : true
     );
     
-    console.log('✅ FINAL SORTED ORDER (Nearest to Furthest):', 
+    console.log('FINAL SORTED ORDER (Nearest to Furthest):', 
       filteredSortedPosts.map((p, i) => `${i+1}. ${p.name}: ${p.distanceFromUser?.toFixed(2)}km`).join('\n')
     );
     
-    // Update all state - ORDER MATTERS!
-    setPosts(sortedPosts);
-    setFilteredPosts(filteredSortedPosts);
+    // CRITICAL: Update ALL state together to prevent race conditions
     setUserLocation(location);
     setIsLocationSortActive(true);
     setSortBy('distance');
     setSortOrder('asc');
+    setPosts(sortedPosts);
+    setFilteredPosts(filteredSortedPosts);
   }, [posts, searchTerm]);
 
+  // Single unified effect for all filtering and sorting
   useEffect(() => {
-    if (!isLocationSortActive) {
-      applyFiltersAndSort(posts, searchTerm, sortBy, sortOrder, false, null);
-    } else {
+    const postsChanged = prevPostsRef.current !== posts;
+    prevPostsRef.current = posts;
+    
+    if (posts.length === 0) {
+      return;
+    }
+    
+    // Skip if posts changed while location sort is active (means handleLocationSort just updated it)
+    if (isLocationSortActive && postsChanged) {
+      return;
+    }
+    
+    if (isLocationSortActive) {
+      // When location sort is active, only filter by search, don't re-sort
       const filtered = posts.filter(post => 
         searchTerm ? post.name.toLowerCase().includes(searchTerm.toLowerCase()) : true
       );
       setFilteredPosts(filtered);
+    } else {
+      // Regular sorting when location sort is not active
+      applyFiltersAndSort(posts, searchTerm, sortBy, sortOrder, false, null);
     }
   }, [posts, searchTerm, sortBy, sortOrder, isLocationSortActive, applyFiltersAndSort]);
 

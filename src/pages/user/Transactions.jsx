@@ -2,7 +2,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Calendar,
-  IndianRupee,
+  DollarSign ,
   Receipt,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -211,7 +211,7 @@ const Transactions = () => {
                         className={`text-xl font-bold ${colorClass} flex items-center justify-end gap-1`}
                       >
                         {transaction.transaction_type === "payment" ? "-" : "+"}
-                        <IndianRupee size={18} />
+                        <DollarSign  size={18} />
                         {parseFloat(transaction.amount).toFixed(2)}
                       </p>
                       <p className="text-xs text-gray-500 flex items-center justify-end gap-1 mt-1">
