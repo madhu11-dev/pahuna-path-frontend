@@ -3,7 +3,7 @@ import {
   Clock,
   CreditCard,
   Home,
-  IndianRupee,
+  DollarSign ,
   Package,
   Users,
   XCircle,
@@ -448,7 +448,7 @@ const MyBookings = () => {
                           Total Amount
                         </p>
                         <p className="text-2xl text-emerald-700 flex items-start">
-                          <IndianRupee size={24} className="mr-1 mt-1" />
+                          <DollarSign  size={24} className="mr-1 mt-1" />
                           {booking.total_amount}
                         </p>
                       </div>

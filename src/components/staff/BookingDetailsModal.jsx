@@ -1,4 +1,4 @@
-import { X, User, Home, Calendar, CreditCard, IndianRupee, XCircle } from 'lucide-react';
+import { X, User, Home, Calendar, CreditCard, DollarSign , XCircle } from 'lucide-react';
 
 const BookingDetailsModal = ({ booking, isOpen, onClose, onCancel, isCancelling }) => {
   if (!isOpen || !booking) return null;
@@ -132,7 +132,7 @@ const BookingDetailsModal = ({ booking, isOpen, onClose, onCancel, isCancelling 
               <div className="flex justify-between">
                 <span>Room Subtotal:</span>
                 <span className="font-semibold flex items-center">
-                  <IndianRupee size={14} />
+                  <DollarSign  size={14} />
                   {parseFloat(booking.room_subtotal).toFixed(2)}
                 </span>
               </div>
@@ -140,7 +140,7 @@ const BookingDetailsModal = ({ booking, isOpen, onClose, onCancel, isCancelling 
                 <div className="flex justify-between">
                   <span>Services Subtotal:</span>
                   <span className="font-semibold flex items-center">
-                    <IndianRupee size={14} />
+                    <DollarSign  size={14} />
                     {parseFloat(booking.services_subtotal).toFixed(2)}
                   </span>
                 </div>
@@ -148,7 +148,7 @@ const BookingDetailsModal = ({ booking, isOpen, onClose, onCancel, isCancelling 
               <div className="flex justify-between pt-2 border-t border-gray-300">
                 <span className="font-bold">Total Amount:</span>
                 <span className="font-bold text-lg flex items-center text-emerald-600">
-                  <IndianRupee size={18} />
+                  <DollarSign  size={18} />
                   {parseFloat(booking.total_amount).toFixed(2)}
                 </span>
               </div>

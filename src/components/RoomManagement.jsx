@@ -1,4 +1,4 @@
-import { Plus, Edit3, Trash2, XCircle, Users, Home, IndianRupee , ImageIcon, Wind, Edit2 } from "lucide-react";
+import { Plus, Edit3, Trash2, XCircle, Users, Home, DollarSign  , ImageIcon, Wind, Edit2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../apis/Api";
@@ -270,7 +270,7 @@ const RoomManagement = ({ accommodationId }) => {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                <IndianRupee  size={16} className="inline mr-1" />
+                <DollarSign   size={16} className="inline mr-1" />
                 Base Price (Per Night)
               </label>
               <input
@@ -447,7 +447,7 @@ const RoomManagement = ({ accommodationId }) => {
 
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center text-lg font-bold text-emerald-600">
-                      <IndianRupee  size={20} className="mr-1" />
+                      <DollarSign   size={20} className="mr-1" />
                       Rs. {room.base_price}
                       <span className="text-sm font-normal text-gray-600 ml-1">/ night</span>
                     </div>

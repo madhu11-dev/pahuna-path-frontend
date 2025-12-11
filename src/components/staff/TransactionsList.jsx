@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { Search, Filter, Calendar, CreditCard, ArrowUpRight, ArrowDownRight, IndianRupee, Download } from 'lucide-react';
+import { Search, Filter, Calendar, CreditCard, ArrowUpRight, ArrowDownRight, DollarSign , Download } from 'lucide-react';
 import { getStaffTransactionsApi } from '../../apis/Api';
 
 const TransactionsList = () => {
@@ -154,7 +154,7 @@ const TransactionsList = () => {
               <div>
                 <p className="text-sm text-gray-600">Total Payments</p>
                 <p className="text-2xl font-bold text-gray-900 flex items-center">
-                  <IndianRupee size={20} />
+                  <DollarSign  size={20} />
                   {parseFloat(stats.total_payments || 0).toFixed(2)}
                 </p>
               </div>
@@ -169,7 +169,7 @@ const TransactionsList = () => {
               <div>
                 <p className="text-sm text-gray-600">Total Refunds</p>
                 <p className="text-2xl font-bold text-gray-900 flex items-center">
-                  <IndianRupee size={20} />
+                  <DollarSign  size={20} />
                   {parseFloat(stats.total_refunds || 0).toFixed(2)}
                 </p>
               </div>
@@ -179,12 +179,12 @@ const TransactionsList = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center gap-4">
               <div className="bg-blue-100 p-3 rounded-lg">
-                <IndianRupee className="text-blue-600" size={24} />
+                <DollarSign  className="text-blue-600" size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Profit</p>
                 <p className="text-2xl font-bold text-gray-900 flex items-center">
-                  <IndianRupee size={20} />
+                  <DollarSign  size={20} />
                   {(parseFloat(stats.total_payments || 0) - parseFloat(stats.total_refunds || 0)).toFixed(2)}
                 </p>
               </div>
@@ -323,7 +323,7 @@ const TransactionsList = () => {
 
                     <div className="text-right">
                       <p className={`text-xl font-bold ${colorClass} flex items-center justify-end gap-1`}>
-                        <IndianRupee size={18} />
+                        <DollarSign  size={18} />
                         {parseFloat(transaction.amount).toFixed(2)}
                       </p>
                       <p className="text-xs text-gray-500 flex items-center justify-end gap-1 mt-1">
