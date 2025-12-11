@@ -129,7 +129,6 @@ const Feedpage = () => {
   }, []);
 
   const fetchPlaces = useCallback(async (showLoadingState = true, skipSortIfLocationActive = false) => {
-    console.log('🔄 fetchPlaces called');
     if (showLoadingState) {
       setLoading(true);
       setError(null);
@@ -137,7 +136,6 @@ const Feedpage = () => {
     try {
       const response = await getPlaces();
       const fetched = (response?.data || []).map(place => normalizePlace(place, null));
-      console.log('📦 Fetched places from API:', fetched.length);
       setPosts(fetched);
       setFilteredPosts(fetched); // Set initial filtered posts to all posts
     } catch (err) {
@@ -175,7 +173,7 @@ const Feedpage = () => {
   }, [posts, searchTerm, applyFiltersAndSort]);
 
   const handleLocationSort = useCallback((location) => {
-    console.log('🎯 Location sort triggered with:', location);
+    console.log('Location sort triggered with:', location);
     
     // Re-normalize places with new location and calculate distances
     const updatedPosts = posts.map(post => {
@@ -213,7 +211,7 @@ const Feedpage = () => {
       searchTerm ? post.name.toLowerCase().includes(searchTerm.toLowerCase()) : true
     );
     
-    console.log('✅ FINAL SORTED ORDER (Nearest to Furthest):', 
+    console.log('FINAL SORTED ORDER (Nearest to Furthest):', 
       filteredSortedPosts.map((p, i) => `${i+1}. ${p.name}: ${p.distanceFromUser?.toFixed(2)}km`).join('\n')
     );
     
@@ -224,8 +222,6 @@ const Feedpage = () => {
     setSortOrder('asc');
     setPosts(sortedPosts);
     setFilteredPosts(filteredSortedPosts);
-    
-    console.log('📍 State updated - location sort is now active');
   }, [posts, searchTerm]);
 
   // Single unified effect for all filtering and sorting
@@ -233,30 +229,23 @@ const Feedpage = () => {
     const postsChanged = prevPostsRef.current !== posts;
     prevPostsRef.current = posts;
     
-    console.log('🔄 useEffect triggered - isLocationSortActive:', isLocationSortActive, 'posts count:', posts.length, 'postsChanged:', postsChanged);
-    
     if (posts.length === 0) {
-      console.log('⏭️ Skipping - no posts yet');
       return;
     }
     
     // Skip if posts changed while location sort is active (means handleLocationSort just updated it)
     if (isLocationSortActive && postsChanged) {
-      console.log('⏭️ Skipping - posts just updated by location sort');
       return;
     }
     
     if (isLocationSortActive) {
       // When location sort is active, only filter by search, don't re-sort
-      console.log('📍 Location sort active - applying search filter only');
       const filtered = posts.filter(post => 
         searchTerm ? post.name.toLowerCase().includes(searchTerm.toLowerCase()) : true
       );
-      console.log('🔍 Filtered results:', filtered.map((p, i) => `${i+1}. ${p.name}: ${p.distanceFromUser?.toFixed(2)}km`).join(', '));
       setFilteredPosts(filtered);
     } else {
       // Regular sorting when location sort is not active
-      console.log('📊 Regular sort active - applying filters and sort');
       applyFiltersAndSort(posts, searchTerm, sortBy, sortOrder, false, null);
     }
   }, [posts, searchTerm, sortBy, sortOrder, isLocationSortActive, applyFiltersAndSort]);
