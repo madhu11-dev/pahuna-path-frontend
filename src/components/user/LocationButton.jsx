@@ -1,7 +1,7 @@
 import { AlertCircle, Loader2, MapPin, Target } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { getCurrentLocation, getHighPrecisionLocation } from "../utils/location";
+import { getCurrentLocation, getHighPrecisionLocation } from "../../utils/location";
 
 const LocationButton = ({ onLocationUpdate, isActive, className = "" }) => {
   const [isLoading, setIsLoading] = useState(false);

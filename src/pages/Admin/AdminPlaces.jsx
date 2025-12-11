@@ -11,15 +11,16 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import {
   deletePlaceApi,
   getAllPlacesApi,
   mergePlacesApi,
   verifyPlaceApi,
 } from "../../apis/Api";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminSidebar from "../../components/admin/AdminSidebar";
+import AdminPageLayout from "../../components/admin/AdminPageLayout";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const AdminPlaces = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -28,6 +29,7 @@ const AdminPlaces = () => {
   const [selectedPlaces, setSelectedPlaces] = useState([]);
   const [mergeMode, setMergeMode] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, data: null });
   const [mergeOptions, setMergeOptions] = useState({
     selectedPlaceName: "",
     selectedDescription: "",
@@ -56,24 +58,27 @@ const AdminPlaces = () => {
   };
 
   // Delete place
-  const handleDeletePlace = async (placeId, placeName) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete "${placeName}"? This action cannot be undone and will also remove all reviews for this place.`
-      )
-    ) {
-      try {
-        const response = await deletePlaceApi(placeId);
-        if (response.status) {
-          toast.success("Place deleted successfully");
-          fetchPlaces(); // Refresh the list
-        } else {
-          toast.error(response.message || "Failed to delete place");
-        }
-      } catch (error) {
-        console.error("Error deleting place:", error);
-        toast.error("Failed to delete place");
+  const handleDeletePlace = (placeId, placeName) => {
+    setConfirmModal({
+      isOpen: true,
+      data: { placeId, placeName },
+    });
+  };
+
+  const executeDeletePlace = async () => {
+    const { placeId } = confirmModal.data;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    try {
+      const response = await deletePlaceApi(placeId);
+      if (response.status) {
+        toast.success("Place deleted successfully");
+        fetchPlaces(); // Refresh the list
+      } else {
+        toast.error(response.message || "Failed to delete place");
       }
+    } catch (error) {
+      console.error("Error deleting place:", error);
+      toast.error("Failed to delete place");
     }
   };
 
@@ -211,38 +216,32 @@ const AdminPlaces = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-gray-100">
-        <AdminSidebar
-          activeTab="places"
-          setActiveTab={() => {}}
-          isSidebarOpen={isSidebarOpen}
-          setIsSidebarOpen={setIsSidebarOpen}
-        />
-        <main className="flex-1 p-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg text-gray-600">Loading places...</div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar
+      <AdminPageLayout
         activeTab="places"
         setActiveTab={() => {}}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
-      />
+      >
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-gray-600">Loading places...</div>
+        </div>
+      </AdminPageLayout>
+    );
+  }
 
-      <main className="flex-1 p-8 overflow-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 space-y-4 sm:space-y-0">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Places Management
-            </h1>
+  return (
+    <AdminPageLayout
+      activeTab="places"
+      setActiveTab={() => {}}
+      isSidebarOpen={isSidebarOpen}
+      setIsSidebarOpen={setIsSidebarOpen}
+    >
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 space-y-4 sm:space-y-0">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Places Management
+          </h1>
             <p className="text-gray-600 mt-1">
               Manage all places, reviews, and merge duplicates
             </p>
@@ -777,10 +776,19 @@ const AdminPlaces = () => {
             </div>
           </div>
         )}
-      </main>
 
-      <ToastContainer position="top-right" />
-    </div>
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, data: null })}
+        onConfirm={executeDeletePlace}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete "${confirmModal.data?.placeName}"? This action cannot be undone and will also remove all reviews for this place.`}
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        confirmButtonColor="red"
+      />
+    </AdminPageLayout>
   );
 };
 

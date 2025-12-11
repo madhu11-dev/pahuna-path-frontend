@@ -1,7 +1,6 @@
 import { Building2, MapPin, Menu, UserCheck, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import {
   CartesianGrid,
   Line,
@@ -12,7 +11,8 @@ import {
   YAxis,
 } from "recharts";
 import { getAllStaffApi, getDashboardStatsApi } from "../../apis/Api";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminSidebar from "../../components/admin/AdminSidebar";
+import AdminPageLayout from "../../components/admin/AdminPageLayout";
 
 // --- Admin Dashboard ---
 const AdminDashboard = () => {
@@ -27,7 +27,7 @@ const AdminDashboard = () => {
       total_hotels: 0,
       total_reviews: 0,
     },
-    visitor_graph_data: [],
+    user_graph_data: [],
   });
 
   const [staff, setStaff] = useState([]);
@@ -82,10 +82,10 @@ const AdminDashboard = () => {
       color: "bg-blue-100 text-blue-700",
     },
     {
-      title: "Pending Accommodations",
-      value: dashboardStats.stats.pending_accommodations || 0,
-      icon: Building2,
-      color: "bg-red-100 text-red-700",
+      title: "Total Reviews",
+      value: dashboardStats.stats.total_reviews || 0,
+      icon: UserCheck,
+      color: "bg-green-100 text-green-700",
     },
     {
       title: "Total Places",
@@ -113,24 +113,14 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans">
-      {/* Sidebar */}
-      <AdminSidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-      />
-
-      {/* Main */}
-      <main className="flex-1 p-4 md:p-8 space-y-6">
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          className="md:hidden mb-4 p-2 bg-emerald-900 text-white rounded-lg"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
+    <AdminPageLayout
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      isSidebarOpen={isSidebarOpen}
+      setIsSidebarOpen={setIsSidebarOpen}
+    >
+      {/* Dashboard Content */}
+      <main className="space-y-6">
         {/* Dashboard */}
         {activeTab === "dashboard" && (
           <>
@@ -159,26 +149,46 @@ const AdminDashboard = () => {
             </div>
             <div className="bg-white p-6 rounded-xl shadow-lg">
               <h2 className="text-xl font-bold text-emerald-800 mb-4">
-                Visitors Graph 2025
+                User Registrations {new Date().getFullYear()}
               </h2>
-              {dashboardStats.visitor_graph_data.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={dashboardStats.visitor_graph_data}>
-                    <CartesianGrid stroke="#ccc" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
+              {dashboardStats?.user_graph_data && dashboardStats.user_graph_data.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart 
+                    data={dashboardStats.user_graph_data}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis 
+                      dataKey="month" 
+                      stroke="#666"
+                      style={{ fontSize: '12px' }}
+                    />
+                    <YAxis 
+                      stroke="#666"
+                      style={{ fontSize: '12px' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #ccc',
+                        borderRadius: '8px'
+                      }}
+                    />
                     <Line
                       type="monotone"
-                      dataKey="visits"
-                      stroke="#22c55e"
+                      dataKey="users"
+                      stroke="#10b981"
                       strokeWidth={3}
+                      dot={{ fill: '#10b981', r: 4 }}
+                      activeDot={{ r: 6 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-64 flex items-center justify-center text-gray-500">
-                  No visitor data available
+                <div className="h-64 flex flex-col items-center justify-center text-gray-500">
+                  <Users className="w-16 h-16 text-gray-300 mb-4" />
+                  <p>No user registration data available yet</p>
+                  <p className="text-sm text-gray-400 mt-2">Data will appear once users register</p>
                 </div>
               )}
             </div>
@@ -248,56 +258,8 @@ const AdminDashboard = () => {
             )}
           </div>
         )}
-
-        {/* Settings */}
-        {activeTab === "settings" && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-            <div className="bg-white p-6 rounded-xl shadow-lg space-y-4">
-              <h2 className="font-bold text-xl text-emerald-800">
-                System Overview
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h3 className="font-semibold text-blue-800">Total Users</h3>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {dashboardStats.stats.total_users}
-                  </p>
-                </div>
-
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <h3 className="font-semibold text-green-800">Total Places</h3>
-                  <p className="text-2xl font-bold text-green-600">
-                    {dashboardStats.stats.total_places}
-                  </p>
-                </div>
-
-                <div className="p-4 bg-orange-50 rounded-lg">
-                  <h3 className="font-semibold text-orange-800">
-                    Total Accommodations
-                  </h3>
-                  <p className="text-2xl font-bold text-orange-600">
-                    {dashboardStats.stats.total_accommodations}
-                  </p>
-                </div>
-
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <h3 className="font-semibold text-purple-800">
-                    Total Reviews
-                  </h3>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {dashboardStats.stats.total_reviews}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
-
-      <ToastContainer position="top-right" />
-    </div>
+    </AdminPageLayout>
   );
 };
 

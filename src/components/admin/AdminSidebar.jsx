@@ -6,12 +6,11 @@ import {
   Building2, 
   Users, 
   UserCheck, 
-  Settings, 
   LogOut, 
   X 
 } from "lucide-react";
 import { toast } from "react-toastify";
-import { adminLogoutApi } from "../apis/Api";
+import { adminLogoutApi } from "../../apis/Api";
 
 const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen }) => {
   const navigate = useNavigate();
@@ -35,7 +34,6 @@ const AdminSidebar = ({ activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen
     { key: "staff", label: "Staff", icon: UserCheck },
     { key: "accommodations", label: "Accommodations", icon: Building2 },
     { key: "users", label: "Users", icon: Users },
-    { key: "settings", label: "Settings", icon: Settings },
   ];
 
   const getCookie = (name) => {

@@ -4,11 +4,17 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { toast } from 'react-toastify';
-import { getBookingsApi } from '../../apis/Api';
+import { getBookingsApi, updateBookingStatusApi } from '../../apis/Api';
+import BookingDetailsModal from './BookingDetailsModal';
+import ConfirmationModal from '../ConfirmationModal';
 
 const BookingCalendar = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
   useEffect(() => {
     fetchBookings();
@@ -23,8 +29,6 @@ const BookingCalendar = () => {
           let color = '#3b82f6'; // blue for confirmed
           
           if (booking.booking_status === 'pending') color = '#f59e0b'; // orange
-          if (booking.booking_status === 'checked_in') color = '#10b981'; // green
-          if (booking.booking_status === 'checked_out') color = '#6b7280'; // gray
           if (booking.booking_status === 'cancelled') color = '#ef4444'; // red
 
           return {
@@ -50,21 +54,46 @@ const BookingCalendar = () => {
 
   const handleEventClick = (info) => {
     const booking = info.event.extendedProps.booking;
-    
-    const details = `
-Booking Reference: ${booking.booking_reference}
-Accommodation: ${booking.accommodation?.name || 'N/A'}
-Room: ${booking.room?.room_name || 'N/A'}
-Guest: ${booking.user?.name || 'N/A'}
-Guests: ${booking.number_of_guests}
-Status: ${booking.booking_status}
-Payment: ${booking.payment_status}
-Total: NPR ${booking.total_amount}
-Check-in: ${new Date(booking.check_in_date).toLocaleDateString()}
-Check-out: ${new Date(booking.check_out_date).toLocaleDateString()}
-    `.trim();
+    setSelectedBooking(booking);
+    setShowModal(true);
+  };
 
-    alert(details);
+  const handleCancelBooking = () => {
+    if (!selectedBooking) return;
+    setConfirmModal({ isOpen: true });
+  };
+
+  const executeCancelBooking = async () => {
+    setConfirmModal({ isOpen: false });
+    setCancelling(true);
+    try {
+      const response = await updateBookingStatusApi(selectedBooking.id, {
+        booking_status: 'cancelled'
+      });
+
+      if (response.status) {
+        const refundAmount = response.data?.refund_amount || 0;
+        if (refundAmount > 0) {
+          toast.success(`Booking cancelled successfully. Refund of Rs. ${refundAmount.toFixed(2)} will be processed.`);
+        } else {
+          toast.success('Booking cancelled successfully');
+        }
+        setShowModal(false);
+        setSelectedBooking(null);
+        fetchBookings(); // Refresh calendar
+      } else {
+        toast.error(response.message || 'Failed to cancel booking');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to cancel booking');
+      console.error(error);
+    }
+    setCancelling(false);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedBooking(null);
   };
 
   if (loading) {
@@ -89,14 +118,6 @@ Check-out: ${new Date(booking.check_out_date).toLocaleDateString()}
           <span>Confirmed</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#10b981' }}></div>
-          <span>Checked In</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#6b7280' }}></div>
-          <span>Checked Out</span>
-        </div>
-        <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
           <span>Cancelled</span>
         </div>
@@ -115,6 +136,26 @@ Check-out: ${new Date(booking.check_out_date).toLocaleDateString()}
         height="auto"
         editable={false}
         selectable={false}
+      />
+
+      <BookingDetailsModal
+        booking={selectedBooking}
+        isOpen={showModal}
+        onClose={closeModal}
+        onCancel={handleCancelBooking}
+        isCancelling={cancelling}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false })}
+        onConfirm={executeCancelBooking}
+        title="Cancel Booking with Refund"
+        message={`Are you sure you want to cancel booking ${selectedBooking?.booking_reference}? The customer will receive an 80% refund if the booking was paid.`}
+        confirmText="Yes, Cancel & Refund"
+        cancelText="No, Keep Booking"
+        confirmButtonColor="red"
       />
     </div>
   );

@@ -5,7 +5,9 @@ import {
   getAllAccommodationsApi,
   verifyAccommodationApi,
 } from "../../apis/Api";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminPageLayout from "../../components/admin/AdminPageLayout";
+import AdminPageHeader from "../../components/admin/AdminPageHeader";
+import AdminLoadingSpinner from "../../components/admin/AdminLoadingSpinner";
 
 const AdminAccommodations = () => {
   const [activeTab, setActiveTab] = useState("accommodations");
@@ -56,50 +58,29 @@ const AdminAccommodations = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        <AdminSidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          isSidebarOpen={isSidebarOpen}
-          setIsSidebarOpen={setIsSidebarOpen}
-        />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-screen bg-gray-50">
-      <AdminSidebar
+      <AdminLoadingSpinner
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />
+    );
+  }
 
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                  <Hotel className="w-8 h-8 text-emerald-600 mr-3" />
-                  Accommodations Management
-                </h1>
-                <p className="text-gray-600 mt-2">
-                  View and manage all accommodations in the system
-                </p>
-              </div>
-              <div className="bg-emerald-50 px-4 py-2 rounded-lg">
-                <span className="text-emerald-700 font-medium">
-                  {accommodations.length} Total Accommodations
-                </span>
-              </div>
-            </div>
-          </div>
+  return (
+    <AdminPageLayout
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      isSidebarOpen={isSidebarOpen}
+      setIsSidebarOpen={setIsSidebarOpen}
+    >
+      <AdminPageHeader
+        icon={Hotel}
+        title="Accommodations Management"
+        subtitle="View and manage all accommodations in the system"
+        count={accommodations.length}
+        countLabel="Total Accommodations"
+      />
 
           {/* Accommodations List */}
           {accommodations.length === 0 ? (
@@ -241,6 +222,19 @@ const AdminAccommodations = () => {
                           : "⏳ Pending"}
                       </div>
 
+                      {/* Payment Status */}
+                      <div
+                        className={`px-3 py-1 rounded-full text-xs font-medium text-center ${
+                          accommodation.has_paid_verification
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {accommodation.has_paid_verification
+                          ? "✓ Fee Paid"
+                          : "✗ Fee Unpaid"}
+                      </div>
+
                       {/* Verify Button */}
                       <button
                         onClick={() =>
@@ -249,11 +243,15 @@ const AdminAccommodations = () => {
                             accommodation.is_verified
                           )
                         }
+                        disabled={!accommodation.has_paid_verification && !accommodation.is_verified}
                         className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${
-                          accommodation.is_verified
+                          !accommodation.has_paid_verification && !accommodation.is_verified
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : accommodation.is_verified
                             ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
                             : "bg-green-100 text-green-700 hover:bg-green-200"
                         }`}
+                        title={!accommodation.has_paid_verification && !accommodation.is_verified ? "Staff must pay verification fee first" : ""}
                       >
                         {accommodation.is_verified ? "Unverify" : "Verify"}
                       </button>
@@ -263,9 +261,7 @@ const AdminAccommodations = () => {
               ))}
             </div>
           )}
-        </div>
-      </div>
-    </div>
+    </AdminPageLayout>
   );
 };
 

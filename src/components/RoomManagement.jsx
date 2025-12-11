@@ -8,12 +8,14 @@ import {
   updateRoomApi,
   deleteRoomApi,
 } from "../apis/Api";
+import ConfirmationModal from "./ConfirmationModal";
 
 const RoomManagement = ({ accommodationId }) => {
   const [rooms, setRooms] = useState([]);
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, data: null });
 
   const [roomForm, setRoomForm] = useState({
     room_name: "",
@@ -137,15 +139,22 @@ const RoomManagement = ({ accommodationId }) => {
     setShowAddRoom(true);
   };
 
-  const handleDelete = async (roomId) => {
-    if (window.confirm("Are you sure you want to delete this room?")) {
-      const response = await deleteRoomApi(accommodationId, roomId);
-      if (response.status) {
-        toast.success("Room deleted successfully");
-        fetchRooms();
-      } else {
-        toast.error(response.message || "Failed to delete room");
-      }
+  const handleDelete = (roomId) => {
+    setConfirmModal({
+      isOpen: true,
+      data: { roomId },
+    });
+  };
+
+  const executeDelete = async () => {
+    const { roomId } = confirmModal.data;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    const response = await deleteRoomApi(accommodationId, roomId);
+    if (response.status) {
+      toast.success("Room deleted successfully");
+      fetchRooms();
+    } else {
+      toast.error(response.message || "Failed to delete room");
     }
   };
 
@@ -461,6 +470,18 @@ const RoomManagement = ({ accommodationId }) => {
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, data: null })}
+        onConfirm={executeDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this room? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        confirmButtonColor="red"
+      />
     </div>
   );
 };

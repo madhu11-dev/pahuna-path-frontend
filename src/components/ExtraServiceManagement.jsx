@@ -7,12 +7,14 @@ import {
   updateExtraServiceApi,
   deleteExtraServiceApi,
 } from "../apis/Api";
+import ConfirmationModal from "./ConfirmationModal";
 
 const ExtraServiceManagement = ({ accommodationId }) => {
   const [services, setServices] = useState([]);
   const [showAddService, setShowAddService] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, data: null });
 
   const [serviceForm, setServiceForm] = useState({
     service_name: "",
@@ -93,15 +95,22 @@ const ExtraServiceManagement = ({ accommodationId }) => {
     setShowAddService(true);
   };
 
-  const handleDelete = async (serviceId) => {
-    if (window.confirm("Are you sure you want to delete this service?")) {
-      const response = await deleteExtraServiceApi(accommodationId, serviceId);
-      if (response.status) {
-        toast.success("Service deleted successfully");
-        fetchServices();
-      } else {
-        toast.error("Failed to delete service");
-      }
+  const handleDelete = (serviceId) => {
+    setConfirmModal({
+      isOpen: true,
+      data: { serviceId },
+    });
+  };
+
+  const executeDelete = async () => {
+    const { serviceId } = confirmModal.data;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    const response = await deleteExtraServiceApi(accommodationId, serviceId);
+    if (response.status) {
+      toast.success("Service deleted successfully");
+      fetchServices();
+    } else {
+      toast.error("Failed to delete service");
     }
   };
 
@@ -311,6 +320,18 @@ const ExtraServiceManagement = ({ accommodationId }) => {
           ))
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, data: null })}
+        onConfirm={executeDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this service? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        confirmButtonColor="red"
+      />
     </div>
   );
 };
