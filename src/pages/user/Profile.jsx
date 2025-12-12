@@ -4,6 +4,7 @@ import UserNavbar from '../../components/user/UserNavbar';
 import { getUserProfileApi, updateUserProfileApi, updateUserPasswordApi } from '../../apis/Api';
 import { ToastContainer, toast } from 'react-toastify';
 import { IMAGE_PLACEHOLDER, resolveImageUrl } from '../../utils/media';
+import { Check, X } from 'lucide-react';
 
 const getCookie = (name) => {
   const value = `; ${document.cookie}`;
@@ -22,6 +23,14 @@ const Profile = () => {
 
   const [pwdForm, setPwdForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [pwdSubmitting, setPwdSubmitting] = useState(false);
+
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -95,6 +104,21 @@ const Profile = () => {
     }
   };
 
+  const handleNewPasswordChange = (e) => {
+    const passwordValue = e.target.value;
+    setPwdForm({...pwdForm, new_password: passwordValue});
+
+    const validation = {
+      minLength: passwordValue.length >= 8,
+      hasUpperCase: /[A-Z]/.test(passwordValue),
+      hasLowerCase: /[a-z]/.test(passwordValue),
+      hasNumber: /\d/.test(passwordValue),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(passwordValue),
+    };
+
+    setPasswordValidation(validation);
+  };
+
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     const newPw = pwdForm.new_password.trim();
@@ -102,6 +126,11 @@ const Profile = () => {
 
     if (!newPw) {
       toast.error('New password cannot be empty');
+      return;
+    }
+
+    if (!Object.values(passwordValidation).every((v) => v === true)) {
+      toast.error('Password does not meet all requirements');
       return;
     }
 
@@ -203,11 +232,38 @@ const Profile = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">New password</label>
-                    <input type="password" value={pwdForm.new_password} onChange={(e) => setPwdForm({...pwdForm, new_password: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-lg" />
+                    <input type="password" value={pwdForm.new_password} onChange={handleNewPasswordChange} className="w-full mt-1 px-3 py-2 border rounded-lg" />
+                    {pwdForm.new_password && (
+                      <div className="mt-2 p-3 bg-gray-50 rounded-md space-y-1">
+                        <p className="text-xs font-semibold text-gray-700 mb-2">Password Requirements:</p>
+                        <div className="space-y-1">
+                          <p className={`text-xs flex items-center gap-2 ${passwordValidation.minLength ? "text-green-600" : "text-gray-500"}`}>
+                            {passwordValidation.minLength ? <Check size={14} /> : <X size={14} />} At least 8 characters
+                          </p>
+                          <p className={`text-xs flex items-center gap-2 ${passwordValidation.hasUpperCase ? "text-green-600" : "text-gray-500"}`}>
+                            {passwordValidation.hasUpperCase ? <Check size={14} /> : <X size={14} />} One uppercase letter
+                          </p>
+                          <p className={`text-xs flex items-center gap-2 ${passwordValidation.hasLowerCase ? "text-green-600" : "text-gray-500"}`}>
+                            {passwordValidation.hasLowerCase ? <Check size={14} /> : <X size={14} />} One lowercase letter
+                          </p>
+                          <p className={`text-xs flex items-center gap-2 ${passwordValidation.hasNumber ? "text-green-600" : "text-gray-500"}`}>
+                            {passwordValidation.hasNumber ? <Check size={14} /> : <X size={14} />} One number
+                          </p>
+                          <p className={`text-xs flex items-center gap-2 ${passwordValidation.hasSpecialChar ? "text-green-600" : "text-gray-500"}`}>
+                            {passwordValidation.hasSpecialChar ? <Check size={14} /> : <X size={14} />} One special character
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Confirm new password</label>
                     <input type="password" value={pwdForm.confirm_password} onChange={(e) => setPwdForm({...pwdForm, confirm_password: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-lg" />
+                    {pwdForm.confirm_password && pwdForm.confirm_password === pwdForm.new_password && pwdForm.new_password && (
+                      <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
+                        <Check size={16} /> Passwords match
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-3">
                     <button type="submit" disabled={pwdSubmitting} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50">Update password</button>

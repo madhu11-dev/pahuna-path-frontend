@@ -4,6 +4,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { resetPasswordApi } from "../../apis/Api";
 import background from "../../assets/images/login-bg.png";
+import { Check, X } from "lucide-react";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -17,6 +18,14 @@ const ResetPassword = () => {
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+  });
+
   useEffect(() => {
     if (!token || !email) {
       toast.error("Invalid or expired reset link.");
@@ -25,8 +34,21 @@ const ResetPassword = () => {
   }, [token, email, navigate]);
 
   const handlePassword = (e) => {
-    setPassword(e.target.value);
-    if (e.target.value.trim() !== "") {
+    const passwordValue = e.target.value;
+    setPassword(passwordValue);
+
+    const validation = {
+      minLength: passwordValue.length >= 8,
+      hasUpperCase: /[A-Z]/.test(passwordValue),
+      hasLowerCase: /[a-z]/.test(passwordValue),
+      hasNumber: /\d/.test(passwordValue),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(passwordValue),
+    };
+
+    setPasswordValidation(validation);
+
+    const allValid = Object.values(validation).every((v) => v === true);
+    if (allValid) {
       setPasswordError("");
     }
   };
@@ -44,8 +66,8 @@ const ResetPassword = () => {
     if (password.trim() === "") {
       setPasswordError("Password is required");
       isValid = false;
-    } else if (password.trim().length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+    } else if (!Object.values(passwordValidation).every((v) => v === true)) {
+      setPasswordError("Password does not meet all requirements");
       isValid = false;
     } else {
       setPasswordError("");
@@ -136,7 +158,29 @@ const ResetPassword = () => {
                   New Password
                 </label>
                 {passwordError && (
-                  <p className="text-danger">{passwordError}</p>
+                  <p className="text-red-500 text-sm mt-1">{passwordError}</p>
+                )}
+                {password && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-md space-y-1">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Password Requirements:</p>
+                    <div className="space-y-1">
+                      <p className={`text-xs flex items-center gap-2 ${passwordValidation.minLength ? "text-green-600" : "text-gray-500"}`}>
+                        {passwordValidation.minLength ? <Check size={14} /> : <X size={14} />} At least 8 characters
+                      </p>
+                      <p className={`text-xs flex items-center gap-2 ${passwordValidation.hasUpperCase ? "text-green-600" : "text-gray-500"}`}>
+                        {passwordValidation.hasUpperCase ? <Check size={14} /> : <X size={14} />} One uppercase letter
+                      </p>
+                      <p className={`text-xs flex items-center gap-2 ${passwordValidation.hasLowerCase ? "text-green-600" : "text-gray-500"}`}>
+                        {passwordValidation.hasLowerCase ? <Check size={14} /> : <X size={14} />} One lowercase letter
+                      </p>
+                      <p className={`text-xs flex items-center gap-2 ${passwordValidation.hasNumber ? "text-green-600" : "text-gray-500"}`}>
+                        {passwordValidation.hasNumber ? <Check size={14} /> : <X size={14} />} One number
+                      </p>
+                      <p className={`text-xs flex items-center gap-2 ${passwordValidation.hasSpecialChar ? "text-green-600" : "text-gray-500"}`}>
+                        {passwordValidation.hasSpecialChar ? <Check size={14} /> : <X size={14} />} One special character
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -161,7 +205,12 @@ const ResetPassword = () => {
                   Confirm Password
                 </label>
                 {confirmPasswordError && (
-                  <p className="text-danger">{confirmPasswordError}</p>
+                  <p className="text-red-500 text-sm mt-1">{confirmPasswordError}</p>
+                )}
+                {confirmPassword && confirmPassword === password && password && (
+                  <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
+                    <Check size={16} /> Passwords match
+                  </p>
                 )}
               </div>
 

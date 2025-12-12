@@ -4,6 +4,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { registerStaffApi } from "../../apis/Api";
 import background from "../../assets/images/login-bg.png";
+import { Check, X } from "lucide-react";
 
 const HotelStaffRegister = () => {
   const navigate = useNavigate();
@@ -17,6 +18,14 @@ const HotelStaffRegister = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
+
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+  });
 
   const getCookie = (name) => {
     const value = `; ${document.cookie}`;
@@ -44,12 +53,23 @@ const HotelStaffRegister = () => {
   };
 
   const handlePassword = (e) => {
-    setPassword(e.target.value);
-    if (e.target.value.trim() !== "" && e.target.value.length >= 6)
+    const passwordValue = e.target.value;
+    setPassword(passwordValue);
+
+    const validation = {
+      minLength: passwordValue.length >= 8,
+      hasUpperCase: /[A-Z]/.test(passwordValue),
+      hasLowerCase: /[a-z]/.test(passwordValue),
+      hasNumber: /\d/.test(passwordValue),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(passwordValue),
+    };
+
+    setPasswordValidation(validation);
+
+    const allValid = Object.values(validation).every((v) => v === true);
+    if (allValid) {
       setPasswordError("");
-    else if (e.target.value.trim() === "")
-      setPasswordError("Password is required");
-    else setPasswordError("Password must be at least 6 characters");
+    }
   };
 
   const handleConfirmPassword = (e) => {
@@ -72,8 +92,11 @@ const HotelStaffRegister = () => {
       valid = false;
     }
 
-    if (password.trim() === "" || password.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+    if (password.trim() === "") {
+      setPasswordError("Password is required");
+      valid = false;
+    } else if (!Object.values(passwordValidation).every((v) => v === true)) {
+      setPasswordError("Password does not meet all requirements");
       valid = false;
     }
 
@@ -157,8 +180,8 @@ const HotelStaffRegister = () => {
             )}
           </div>
 
-          <div className="flex gap-4">
-            <div className="flex-1">
+          <div className="space-y-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Password *
               </label>
@@ -174,9 +197,31 @@ const HotelStaffRegister = () => {
               {passwordError && (
                 <p className="text-red-500 text-xs mt-1">{passwordError}</p>
               )}
+              {password && (
+                <div className="mt-2 p-2 bg-gray-50 rounded-md space-y-1">
+                  <p className="text-xs font-semibold text-gray-700 mb-1">Password Requirements:</p>
+                  <div className="space-y-0.5">
+                    <p className={`text-xs flex items-center gap-1 ${passwordValidation.minLength ? "text-green-600" : "text-gray-500"}`}>
+                      {passwordValidation.minLength ? <Check size={12} /> : <X size={12} />} At least 8 characters
+                    </p>
+                    <p className={`text-xs flex items-center gap-1 ${passwordValidation.hasUpperCase ? "text-green-600" : "text-gray-500"}`}>
+                      {passwordValidation.hasUpperCase ? <Check size={12} /> : <X size={12} />} One uppercase letter
+                    </p>
+                    <p className={`text-xs flex items-center gap-1 ${passwordValidation.hasLowerCase ? "text-green-600" : "text-gray-500"}`}>
+                      {passwordValidation.hasLowerCase ? <Check size={12} /> : <X size={12} />} One lowercase letter
+                    </p>
+                    <p className={`text-xs flex items-center gap-1 ${passwordValidation.hasNumber ? "text-green-600" : "text-gray-500"}`}>
+                      {passwordValidation.hasNumber ? <Check size={12} /> : <X size={12} />} One number
+                    </p>
+                    <p className={`text-xs flex items-center gap-1 ${passwordValidation.hasSpecialChar ? "text-green-600" : "text-gray-500"}`}>
+                      {passwordValidation.hasSpecialChar ? <Check size={12} /> : <X size={12} />} One special character
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="flex-1">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Confirm Password *
               </label>
@@ -192,6 +237,11 @@ const HotelStaffRegister = () => {
               {confirmPasswordError && (
                 <p className="text-red-500 text-xs mt-1">
                   {confirmPasswordError}
+                </p>
+              )}
+              {confirmPassword && confirmPassword === password && password && (
+                <p className="text-green-600 text-xs mt-1 flex items-center gap-1">
+                  <Check size={12} /> Passwords match
                 </p>
               )}
             </div>

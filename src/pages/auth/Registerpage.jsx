@@ -4,6 +4,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { registerUserApi } from "../../apis/Api";
 import background from "../../assets/images/login-bg.png";
+import { Check, X } from "lucide-react";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -17,6 +18,20 @@ const RegisterPage = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
+
+  // Password validation states
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+  });
+
+  const [emailValidation, setEmailValidation] = useState({
+    isValid: false,
+    message: "",
+  });
 
   const handleName = (e) => {
     setName(e.target.value);
@@ -38,15 +53,44 @@ const RegisterPage = () => {
   }, []);
 
   const handleEmail = (e) => {
-    setEmail(e.target.value);
-    if (e.target.value.trim() !== "" && e.target.value.includes("@"))
+    const emailValue = e.target.value;
+    setEmail(emailValue);
+
+    // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (emailValue.trim() === "") {
+      setEmailValidation({ isValid: false, message: "" });
       setEmailError("");
-    else if (e.target.value.trim() === "") setEmailError("Email is required");
+    } else if (!emailRegex.test(emailValue)) {
+      setEmailValidation({ isValid: false, message: "Invalid email format" });
+      setEmailError("Invalid email format");
+    } else {
+      setEmailValidation({ isValid: true, message: "Valid email" });
+      setEmailError("");
+    }
   };
 
   const handlePassword = (e) => {
-    setPassword(e.target.value);
-    if (e.target.value.trim() !== "") setPasswordError("");
+    const passwordValue = e.target.value;
+    setPassword(passwordValue);
+
+    // Real-time password validation
+    const validation = {
+      minLength: passwordValue.length >= 8,
+      hasUpperCase: /[A-Z]/.test(passwordValue),
+      hasLowerCase: /[a-z]/.test(passwordValue),
+      hasNumber: /\d/.test(passwordValue),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(passwordValue),
+    };
+
+    setPasswordValidation(validation);
+
+    // Check if all validations pass
+    const allValid = Object.values(validation).every((v) => v === true);
+    if (allValid) {
+      setPasswordError("");
+    }
   };
 
   const handleConfirmPassword = (e) => {
@@ -66,15 +110,24 @@ const RegisterPage = () => {
       setNameError("");
     }
 
-    if (email.trim() === "" || !email.includes("@")) {
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email.trim() === "") {
+      setEmailError("Email is required");
+      isValid = false;
+    } else if (!emailRegex.test(email)) {
       setEmailError("Valid email is required");
       isValid = false;
     } else {
       setEmailError("");
     }
 
+    // Password validation
     if (password.trim() === "") {
       setPasswordError("Password is required");
+      isValid = false;
+    } else if (!Object.values(passwordValidation).every((v) => v === true)) {
+      setPasswordError("Password does not meet all requirements");
       isValid = false;
     } else {
       setPasswordError("");
@@ -160,7 +213,7 @@ const RegisterPage = () => {
                 >
                   Name *
                 </label>
-                {nameError && <p className="text-danger">{nameError}</p>}
+                {nameError && <p className="text-red-500 text-sm mt-1">{nameError}</p>}
               </div>
 
               {/* Email */}
@@ -183,7 +236,12 @@ const RegisterPage = () => {
                 >
                   Email Address *
                 </label>
-                {emailError && <p className="text-danger">{emailError}</p>}
+                {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
+                {email && emailValidation.isValid && (
+                  <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
+                    <Check size={16} /> Valid email format
+                  </p>
+                )}
               </div>
 
               {/* Password */}
@@ -207,21 +265,104 @@ const RegisterPage = () => {
                   Password *
                 </label>
                 {passwordError && (
-                  <p className="text-danger">{passwordError}</p>
+                  <p className="text-red-500 text-sm mt-1">{passwordError}</p>
+                )}
+                
+                {/* Password Requirements */}
+                {password && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-md space-y-1">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">
+                      Password Requirements:
+                    </p>
+                    <div className="space-y-1">
+                      <p
+                        className={`text-xs flex items-center gap-2 ${
+                          passwordValidation.minLength
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {passwordValidation.minLength ? (
+                          <Check size={14} />
+                        ) : (
+                          <X size={14} />
+                        )}
+                        At least 8 characters
+                      </p>
+                      <p
+                        className={`text-xs flex items-center gap-2 ${
+                          passwordValidation.hasUpperCase
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {passwordValidation.hasUpperCase ? (
+                          <Check size={14} />
+                        ) : (
+                          <X size={14} />
+                        )}
+                        One uppercase letter
+                      </p>
+                      <p
+                        className={`text-xs flex items-center gap-2 ${
+                          passwordValidation.hasLowerCase
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {passwordValidation.hasLowerCase ? (
+                          <Check size={14} />
+                        ) : (
+                          <X size={14} />
+                        )}
+                        One lowercase letter
+                      </p>
+                      <p
+                        className={`text-xs flex items-center gap-2 ${
+                          passwordValidation.hasNumber
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {passwordValidation.hasNumber ? (
+                          <Check size={14} />
+                        ) : (
+                          <X size={14} />
+                        )}
+                        One number
+                      </p>
+                      <p
+                        className={`text-xs flex items-center gap-2 ${
+                          passwordValidation.hasSpecialChar
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {passwordValidation.hasSpecialChar ? (
+                          <Check size={14} />
+                        ) : (
+                          <X size={14} />
+                        )}
+                        One special character (!@#$%^&*...)
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
+              
+              {/* Confirm Password */}
               <div className="relative">
                 <input
-                  id="password"
-                  name="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
                   type="password"
                   autoComplete="off"
                   onChange={handleConfirmPassword}
                   className="peer placeholder-transparent w-full h-10 border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-cyan-500"
-                  placeholder="Password"
+                  placeholder="Confirm Password"
                 />
                 <label
-                  htmlFor="password"
+                  htmlFor="confirmPassword"
                   className="absolute left-0 -top-3.5 text-gray-600 text-sm transition-all
                     peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 
                     peer-placeholder-shown:top-2 peer-focus:-top-3.5 peer-focus:text-gray-600 
@@ -230,7 +371,12 @@ const RegisterPage = () => {
                   Confirm Password *
                 </label>
                 {confirmPasswordError && (
-                  <p className="text-danger">{confirmPasswordError}</p>
+                  <p className="text-red-500 text-sm mt-1">{confirmPasswordError}</p>
+                )}
+                {confirmPassword && confirmPassword === password && password && (
+                  <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
+                    <Check size={16} /> Passwords match
+                  </p>
                 )}
               </div>
 
